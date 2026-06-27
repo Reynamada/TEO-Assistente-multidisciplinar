@@ -1,0 +1,171 @@
+version: "3.9"
+
+# ================================================================
+# TEO — Docker Compose de PRODUÇÃO
+# Uso: docker-compose -f docker-compose.prod.yml up -d
+# ================================================================
+
+services:
+  # ── PostgreSQL 16 ──────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: teo_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # PostgreSQL NÃO é exposto ao host — apenas acessível internamente
+    expose:
+      - "5432"
+    volumes:
+      - teo_postgres_data:/var/lib/postgresql/data
+      - ./backend/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backups:/backups  # Para scripts de backup
+    networks:
+      - teo-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── FastAPI Backend ────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: teo_backend_prod
+    restart: always
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      ENVIRONMENT: production
+      DEBUG: "false"
+    expose:
+      - "8000"
+    volumes:
+      - ./templates:/app/templates:ro   # Read-only em produção
+      - teo_reports:/app/reports        # Volume para PDFs gerados
+    networks:
+      - teo-internal
+    depends_on:
+      db:
+        condition: service_healthy
+    # Sem --reload em produção, mais workers
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ── Streamlit Frontend ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: teo_frontend_prod
+    restart: always
+    env_file: .env
+    environment:
+      BACKEND_URL: http://backend:8000
+    expose:
+      - "8501"
+    networks:
+      - teo-internal
+    depends_on:
+      - backend
+    command: >
+      streamlit run app.py
+      --server.port 8501
+      --server.address 0.0.0.0
+      --server.headless true
+      --browser.gatherUsageStats false
+      --server.enableCORS false
+      --server.enableXsrfProtection true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── NGINX Reverse Proxy ────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: teo_nginx_prod
+    restart: always
+    ports:
+      - "80:80"    # HTTP → redireciona para HTTPS
+      - "443:443"  # HTTPS
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - teo_certbot_www:/var/www/certbot:ro
+      - teo_certbot_conf:/etc/letsencrypt:ro
+    environment:
+      - DOMAIN=${DOMAIN}
+    networks:
+      - teo-internal
+    depends_on:
+      - backend
+      - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── Certbot (Let's Encrypt SSL) ────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: teo_certbot
+    volumes:
+      - teo_certbot_www:/var/www/certbot
+      - teo_certbot_conf:/etc/letsencrypt
+    # Renova automaticamente o certificado (executa e sai)
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        echo 'Próxima renovação em 12h...';
+        sleep 43200;
+      done"
+
+  # ── pgAdmin (acesso restrito — apenas via LAN/VPN) ─────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: teo_pgadmin_prod
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    # Expõe apenas no localhost — acesse via SSH tunnel
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - teo_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - teo-internal
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  teo_postgres_data:
+    driver: local
+  teo_reports:
+    driver: local
+  teo_pgadmin_data:
+    driver: local
+  teo_certbot_www:
+    driver: local
+  teo_certbot_conf:
+    driver: local
+
+networks:
+  teo-internal:
+    driver: bridge
+    # Rede interna: nenhum container é acessível diretamente da internet
+    # exceto via NGINX nas portas 80 e 443

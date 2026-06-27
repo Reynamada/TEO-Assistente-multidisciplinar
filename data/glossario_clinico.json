@@ -1,0 +1,64 @@
+{
+  "versao": "1.0",
+  "projeto": "TEO — Tu Enlace Organizador",
+  "descricao": "Glossário de termos clínicos e suas traduções para linguagem acessível aos pais",
+  "data_atualizacao": "2026-06-25",
+  "termos": [
+    {
+      "tecnico": "Integração sensorial tátil",
+      "acessivel": "Como o cérebro processa o que o corpo sente ao tocar coisas"
+    },
+    {
+      "tecnico": "Pressão profunda / proprioceptiva",
+      "acessivel": "Atividades com abraços, massagens ou peso que ajudam o corpo a se 'sentir' melhor"
+    },
+    {
+      "tecnico": "Atividades de Vida Diária (AVDs)",
+      "acessivel": "Coisas do dia a dia como vestir, comer e escovar os dentes"
+    },
+    {
+      "tecnico": "PECS (Picture Exchange Communication System)",
+      "acessivel": "Cartinhas com figuras que a criança usa para nos contar o que quer"
+    },
+    {
+      "tecnico": "Comunicação aumentativa e alternativa (CAA)",
+      "acessivel": "Formas diferentes de se comunicar além da fala, como gestos, cartões ou tablet"
+    },
+    {
+      "tecnico": "Alternância de turnos",
+      "acessivel": "Aprender a esperar a sua vez durante brincadeiras e conversas"
+    },
+    {
+      "tecnico": "Regulação emocional",
+      "acessivel": "Lidar com os sentimentos e as emoções de forma saudável"
+    },
+    {
+      "tecnico": "Tolerância a frustração",
+      "acessivel": "Conseguir lidar quando as coisas não saem como esperado sem grandes crises"
+    },
+    {
+      "tecnico": "Motricidade fina",
+      "acessivel": "Movimentos pequenos das mãos e dedos, como escrever ou abotoar"
+    },
+    {
+      "tecnico": "Motricidade grossa",
+      "acessivel": "Movimentos grandes do corpo, como correr, pular e equilibrar"
+    },
+    {
+      "tecnico": "Imitação vocal",
+      "acessivel": "Repetir sons que o terapeuta faz — um passo importante para desenvolver a fala"
+    },
+    {
+      "tecnico": "Memória de trabalho",
+      "acessivel": "Capacidade de lembrar informações por um curto período para realizar uma tarefa"
+    },
+    {
+      "tecnico": "Assistência máxima / mínima",
+      "acessivel": "Com muita ajuda / quase sem ajuda — mostra o quanto de independência a criança tem"
+    },
+    {
+      "tecnico": "Laudo de neurodesenvolvimento",
+      "acessivel": "Documento médico que descreve o diagnóstico e orienta o tratamento da criança"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+# Ambiente Virtual (O mais importante!)
+venv/
+env/
+.venv/
+
+# Temporários do Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Arquivos do Sistema
+.DS_Store
+Thumbs.db
+
+# Configurações sensíveis
+.env
+.env.prod
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Relatórios PDF gerados
+reports/
+*.pdf
+
+# Logs
+logs/
+*.log
+
+# Dados de testes locais
+data/test_*.csv
+data/mock_*.json
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Docker
+.dockerignore
