@@ -9,12 +9,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config import get_settings
-from app.database import create_tables
-from app.jobs.cron_jobs import create_scheduler
+from .config import get_settings
+from .database import create_tables
+from .jobs.cron_jobs import create_scheduler
 
 # Importa todos os routers
-from app.routers import auth, patients, evolutions, appointments, whatsapp, reports
+from .routers import auth, patients, evolutions, appointments, whatsapp, reports
 
 settings = get_settings()
 

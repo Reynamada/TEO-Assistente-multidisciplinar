@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3:8b"
 
+    # --- OpenAI (optional) ---
+    openai_api_key: str = ""
+    openai_model: str = "gpt-3.5-turbo"
+
     # --- Twilio WhatsApp ---
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
