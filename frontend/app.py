@@ -208,15 +208,15 @@ def page_dashboard():
     try:
         headers = get_auth_headers()
         # Pacientes ativos
-        r = httpx.get(f"{BACKEND_URL}/api/v1/patients/", headers=headers, timeout=5)
+        r = httpx.get(f"{BACKEND_URL}/api/v1/patients/", headers=headers, timeout=30)
         pacientes = r.json() if r.status_code == 200 else []
 
         # Agendamentos
-        r2 = httpx.get(f"{BACKEND_URL}/api/v1/appointments/pending-count", headers=headers, timeout=5)
+        r2 = httpx.get(f"{BACKEND_URL}/api/v1/appointments/pending-count", headers=headers, timeout=30)
         counts = r2.json() if r2.status_code == 200 else {}
 
         # Laudos vencendo
-        r3 = httpx.get(f"{BACKEND_URL}/api/v1/patients/laudos/vencendo", headers=headers, timeout=5)
+        r3 = httpx.get(f"{BACKEND_URL}/api/v1/patients/laudos/vencendo", headers=headers, timeout=30)
         laudos_vencendo = r3.json() if r3.status_code == 200 else []
 
         with col1:

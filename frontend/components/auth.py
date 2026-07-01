@@ -70,7 +70,7 @@ def login_page():
                     resp = httpx.post(
                         f"{BACKEND_URL}/api/v1/auth/token",
                         data={"username": email, "password": password},
-                        timeout=10
+                        timeout=30
                     )
                     if resp.status_code == 200:
                         data = resp.json()
