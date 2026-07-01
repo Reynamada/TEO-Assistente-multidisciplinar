@@ -287,7 +287,9 @@ HTTP 503 com mensagem descritiva ao usuário
 | **Ollama** | LLM Local | Gratuito | — | Fallback offline |
 | **PostgreSQL** | Banco relacional | Gratuito | URL + senha | Todos os dados clínicos |
 | **SQLAlchemy** | ORM Python | Gratuito | — | Abstração do banco |
-| **Twilio** | WhatsApp API | Pago/Sandbox | SID + Token | Comunicação com responsáveis |
+| **WhatsApp Web (wa.me)** | Link Direto | **Gratuito** | — | Envio imediato e gratuito via navegador (sem Twilio) |
+| **Twilio** | WhatsApp API | Pago/Sandbox | SID + Token | Envio em segundo plano automatizado via API |
+| **SMTP Email** | Protocolo de Envio | Gratuito / Hospedado | Usuário + Senha SMTP | Envio automático dos PDFs aos pais e neuropediatras |
 | **WeasyPrint** | PDF Engine | Gratuito | — | Relatório semestral |
 | **Jinja2** | Template Engine | Gratuito | — | Template HTML do PDF |
 | **APScheduler** | Task Scheduler | Gratuito | — | CRON da regra dos 5 meses |
@@ -296,7 +298,7 @@ HTTP 503 com mensagem descritiva ao usuário
 | **NGINX** | Reverse Proxy | Gratuito | — | HTTPS + WebSocket (produção) |
 
 > [!NOTE]
-> Das 12 tecnologias principais, **11 são completamente gratuitas**. O único custo real é o Twilio WhatsApp Business — e mesmo esse tem um Sandbox gratuito para desenvolvimento e demonstração.
+> Das 14 tecnologias principais, **13 são completamente gratuitas**. O único custo real opcional é o Twilio WhatsApp Business — e mesmo esse tem o WhatsApp Web gratuito integrado como alternativa.
 
 ---
 
