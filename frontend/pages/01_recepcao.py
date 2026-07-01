@@ -8,12 +8,7 @@ import streamlit as st
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from components.auth import get_auth_headers, render_header  # noqa
-
-try:
-    from app import render_header  # type: ignore
-except Exception:
-    pass
+from components.auth import get_auth_headers  # noqa
 
 BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
 
