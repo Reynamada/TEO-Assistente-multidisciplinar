@@ -262,11 +262,11 @@ def main():
         page_dashboard()
     elif current_page == "pacientes":
         # Importa a página de recepção (pacientes)
-        exec(open(os.path.join(os.path.dirname(__file__), "pages", "01_recepcao.py")).read())
+        exec(open(os.path.join(os.path.dirname(__file__), "pages", "01_recepcao.py"), encoding="utf-8").read())
     elif current_page == "evolucoes":
-        exec(open(os.path.join(os.path.dirname(__file__), "pages", "02_terapeutas.py")).read())
+        exec(open(os.path.join(os.path.dirname(__file__), "pages", "02_terapeutas.py"), encoding="utf-8").read())
     elif current_page in ["relatorios", "progresso"]:
-        exec(open(os.path.join(os.path.dirname(__file__), "pages", "03_neuropediatra.py")).read())
+        exec(open(os.path.join(os.path.dirname(__file__), "pages", "03_neuropediatra.py"), encoding="utf-8").read())
     elif current_page == "agendamentos":
         page_em_construcao("📅 Agendamentos")
         st.info("Agendamentos são gerenciados automaticamente pelo TEO via WhatsApp. Consulte os registros abaixo.")
