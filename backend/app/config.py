@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     twilio_whatsapp_from: str = "whatsapp:+14155238886"
     twilio_webhook_url: str = ""
 
+    # --- SMTP Email ---
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@clinicateo.com"
+
     # --- Clínica ---
     clinic_name: str = "Clínica TEO Neurodesenvolvimento"
     clinic_phone: str = ""
