@@ -2,8 +2,7 @@ services:
   - type: web
     name: teo-backend
     env: docker
-    dockerContext: .
-    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     envVars:
       - key: DATABASE_URL
         sync: false
