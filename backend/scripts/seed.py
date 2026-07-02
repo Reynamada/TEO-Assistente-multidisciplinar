@@ -59,10 +59,18 @@ def run_seed():
             email="camila@clinica.com",
             hashed_password=senha_padrao,
             role=ProfessionalRole.TERAPEUTA,
-            especialidade=ProfessionalEspecialidade.FONOAUDIOLOGIA
+            especialidade=ProfessionalEspecialidade.FONOAUDIOLOGIA,
         )
 
-        db.add_all([neuropediatra, recepcao, to, fono])
+        admin = Professional(
+            nome="Reyna Admin",
+            email="adminReyna@clinica.com",
+            hashed_password=senha_padrao,
+            role=ProfessionalRole.ADMIN,
+            especialidade=None,
+        )
+
+        db.add_all([neuropediatra, recepcao, to, fono, admin])
         db.commit()
         db.refresh(neuropediatra)
         db.refresh(to)
