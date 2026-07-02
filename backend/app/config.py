@@ -2,7 +2,7 @@
 TEO — Configurações centralizadas via pydantic-settings.
 Lê automaticamente do arquivo .env na raiz do projeto.
 """
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings
 from functools import lru_cache
 
 
