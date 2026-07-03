@@ -63,7 +63,7 @@ def gerar_relatorio_semestral(
 
         # Write minimal PDF header to create a valid (though empty) PDF file
         with open(pdf_path, "wb") as f:
-            f.write(b"%PDF-1.4\n%âãÏÓ\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF")
+            f.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF")
 
         logger.info(f"Generated placeholder PDF for {paciente_data.get('nome')} at {pdf_path}")
         return str(pdf_path)

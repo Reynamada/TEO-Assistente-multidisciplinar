@@ -5,7 +5,7 @@ Cobre Pacientes, Profissionais, Evoluções, Agendamentos e Relatórios.
 from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr
 from app.models.professional import ProfessionalRole, ProfessionalEspecialidade
 from app.models.appointment import AppointmentStatus
 
