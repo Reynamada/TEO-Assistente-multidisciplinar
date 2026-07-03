@@ -79,8 +79,14 @@ def login_page():
                         st.session_state["role"] = data["role"]
                         st.session_state["user_name"] = data["nome"]
                         st.rerun()
-                    else:
+                    elif resp.status_code == 401:
                         st.error("❌ E-mail ou senha incorretos.")
+                    else:
+                        try:
+                            err_detail = resp.json().get("detail", resp.text)
+                        except Exception:
+                            err_detail = resp.text
+                        st.error(f"❌ Erro no Servidor (HTTP {resp.status_code}): {err_detail}")
                 except httpx.ConnectError:
                     st.error("⚠️ Backend indisponível. Verifique se o servidor está rodando.")
                 except Exception as e:

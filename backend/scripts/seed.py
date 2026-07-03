@@ -7,6 +7,8 @@ from app.database import SessionLocal, Base, engine
 from app.models.professional import Professional, ProfessionalRole, ProfessionalEspecialidade
 from app.models.patient import Patient
 from app.models.evolution import Evolution
+from app.models.appointment import Appointment
+from app.models.report import Report
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
