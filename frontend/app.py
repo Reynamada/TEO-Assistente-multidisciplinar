@@ -269,8 +269,7 @@ def main():
     elif current_page in ["relatorios", "progresso"]:
         exec(open(os.path.join(os.path.dirname(__file__), "pages", "03_neuropediatra.py"), encoding="utf-8").read(), globals())
     elif current_page == "agendamentos":
-        page_em_construcao("📅 Agendamentos")
-        st.info("Agendamentos são gerenciados automaticamente pelo TEO via WhatsApp. Consulte os registros abaixo.")
+        exec(open(os.path.join(os.path.dirname(__file__), "pages", "04_agendamentos.py"), encoding="utf-8").read(), globals())
     else:
         page_dashboard()
 

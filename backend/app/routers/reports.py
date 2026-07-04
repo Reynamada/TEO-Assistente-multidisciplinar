@@ -188,7 +188,7 @@ def download_report_pdf(
     report_id: UUID,
     db: Session = Depends(get_db),
     current_user: Professional = Depends(require_role(
-        ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN
+        ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN, ProfessionalRole.RECEPCAO
     ))
 ):
     """Download do PDF do relatório semestral. Se o arquivo físico não existir, reconstrói."""

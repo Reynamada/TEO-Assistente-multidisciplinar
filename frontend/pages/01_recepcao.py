@@ -114,6 +114,73 @@ with tab1:
                     if alerta:
                         st.caption("📱 Alerta WhatsApp enviado")
 
+                st.divider()
+                col_sessions, col_rep = st.columns(2)
+                
+                with col_sessions:
+                    st.markdown("##### 🩺 Especialidades & Terapeutas")
+                    # Fetch evolutions for this patient
+                    evols = get_api(f"/evolutions/patient/{p['id']}?limit=10")
+                    if not evols:
+                        st.caption("Nenhuma evolução registrada para este paciente ainda.")
+                    else:
+                        # Extract unique therapists/specialties
+                        therapists = {}
+                        for ev in evols:
+                            prof = ev.get("profissional", {})
+                            prof_name = prof.get("nome", "Terapeuta")
+                            specialty = ev.get("tipo_sessao", "Terapia")
+                            therapists[specialty] = prof_name
+                        
+                        # Display therapists
+                        for spec, name in therapists.items():
+                            st.write(f"🧬 **{spec}:** {name}")
+                        
+                        # Display recent dates
+                        dates = []
+                        for ev in evols[:5]:
+                            if ev.get("data_sessao"):
+                                try:
+                                    d_formatted = date.fromisoformat(ev["data_sessao"]).strftime("%d/%m/%Y")
+                                    dates.append(d_formatted)
+                                except Exception:
+                                    dates.append(ev["data_sessao"])
+                        
+                        if dates:
+                            st.write(f"📅 **Últimas sessões:** {', '.join(dates)}")
+                
+                with col_rep:
+                    st.markdown("##### 📄 Relatórios Semestrais (PDF)")
+                    # Fetch reports for this patient
+                    reps = get_api(f"/reports/patient/{p['id']}")
+                    if not reps:
+                        st.caption("Nenhuma guia de relatório gerada ainda.")
+                    else:
+                        for rp in reps:
+                            if rp.get("pdf_path"):
+                                rp_id = rp["id"]
+                                try:
+                                    pdf_url = f"{BACKEND_URL}/api/v1/reports/{rp_id}/download"
+                                    r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=15)
+                                    if r_pdf.status_code == 200:
+                                        p_fim = rp.get("periodo_fim", "")
+                                        try:
+                                            p_fim_formatted = date.fromisoformat(p_fim).strftime("%d/%m/%Y")
+                                        except Exception:
+                                            p_fim_formatted = p_fim
+                                        
+                                        st.download_button(
+                                            label=f"⬇️ Relatório até {p_fim_formatted}",
+                                            data=r_pdf.content,
+                                            file_name=f"relatorio_{p['nome'].replace(' ', '_').lower()}_{rp_id[:8]}.pdf",
+                                            mime="application/pdf",
+                                            key=f"dl_rec_{rp_id}"
+                                        )
+                                    else:
+                                        st.caption(f"⏳ PDF indisponível (HTTP {r_pdf.status_code})")
+                                except Exception as e:
+                                    st.caption(f"⚠️ Erro ao carregar PDF: {e}")
+
                 # Permite edição se for admin ou recepcao
                 if get_role() in ["admin", "recepcao"]:
                     st.divider()
