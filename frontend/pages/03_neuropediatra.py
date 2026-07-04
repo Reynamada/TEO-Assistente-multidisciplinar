@@ -185,22 +185,21 @@ with tab3:
 
                 if rel.get("pdf_path"):
                     rel_id = rel["id"]
-                    if st.button(f"⬇️ Baixar PDF", key=f"dl_{rel_id}"):
-                        try:
-                            r = httpx.get(
-                                f"{BACKEND_URL}/api/v1/reports/{rel_id}/download",
-                                headers=get_auth_headers(),
-                                timeout=30
+                    try:
+                        pdf_url = f"{BACKEND_URL}/api/v1/reports/{rel_id}/download"
+                        r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=15)
+                        if r_pdf.status_code == 200:
+                            st.download_button(
+                                label="📄 Baixar PDF do Relatório",
+                                data=r_pdf.content,
+                                file_name=f"relatorio_{paciente_nome.replace(' ', '_').lower()}_{rel_id[:8]}.pdf",
+                                mime="application/pdf",
+                                key=f"dl_{rel_id}"
                             )
-                            if r.status_code == 200:
-                                st.download_button(
-                                    label="📄 Clique para baixar o PDF",
-                                    data=r.content,
-                                    file_name=f"relatorio_{paciente_nome.replace(' ', '_').lower()}.pdf",
-                                    mime="application/pdf"
-                                )
-                        except Exception as e:
-                            st.error(str(e))
+                        else:
+                            st.warning("⚠️ Arquivo PDF indisponível no servidor no momento.")
+                    except Exception as e:
+                        st.error(f"Erro ao obter bytes do PDF: {e}")
 
     st.divider()
 
@@ -226,13 +225,15 @@ with tab3:
     if gerar:
         with st.spinner("TEO está analisando e gerando o relatório... ⏳ Isso pode levar alguns segundos."):
             try:
+                payload = {
+                    "periodo_inicio": str(periodo_inicio),
+                    "periodo_fim": str(periodo_fim),
+                    "pareceres": st.session_state.get("pareceres", {})
+                }
                 r = httpx.post(
                     f"{BACKEND_URL}/api/v1/reports/generate/{pac_id}",
+                    json=payload,
                     headers=get_auth_headers(),
-                    params={
-                        "periodo_inicio": str(periodo_inicio),
-                        "periodo_fim": str(periodo_fim),
-                    },
                     timeout=120
                 )
                 if r.status_code == 201:

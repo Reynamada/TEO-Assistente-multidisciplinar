@@ -15,7 +15,7 @@ from app.models.report import Report
 from app.models.evolution import Evolution
 from app.models.patient import Patient
 from app.models.professional import Professional, ProfessionalRole
-from app.schemas.schemas import ReportCreate, ReportUpdate, ReportResponse
+from app.schemas.schemas import ReportCreate, ReportUpdate, ReportResponse, ReportGenerateRequest
 from app.services.auth_service import get_current_user, require_role
 from app.services import llm_service, pdf_service
 
@@ -37,8 +37,7 @@ def list_reports(
 @router.post("/generate/{patient_id}", response_model=ReportResponse, status_code=201)
 def generate_report(
     patient_id: UUID,
-    periodo_inicio: date,
-    periodo_fim: date,
+    payload: ReportGenerateRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Professional = Depends(require_role(
@@ -51,6 +50,7 @@ def generate_report(
     2. Chama LLM para síntese global (background)
     3. Gera o PDF (background)
     """
+    import json
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
@@ -58,8 +58,8 @@ def generate_report(
     # Busca evoluções do período (max 48)
     evolucoes = db.query(Evolution).filter(
         Evolution.paciente_id == patient_id,
-        Evolution.data_sessao >= periodo_inicio,
-        Evolution.data_sessao <= periodo_fim
+        Evolution.data_sessao >= payload.periodo_inicio,
+        Evolution.data_sessao <= payload.periodo_fim
     ).order_by(Evolution.data_sessao.asc()).limit(48).all()
 
     if not evolucoes:
@@ -68,9 +68,10 @@ def generate_report(
     # Cria registro do relatório
     report = Report(
         paciente_id=patient_id,
-        periodo_inicio=periodo_inicio,
-        periodo_fim=periodo_fim,
+        periodo_inicio=payload.periodo_inicio,
+        periodo_fim=payload.periodo_fim,
         num_evolucoes_analisadas=str(len(evolucoes)),
+        pareceres_json=json.dumps(payload.pareceres) if payload.pareceres else None
     )
     db.add(report)
     db.commit()
@@ -83,8 +84,8 @@ def generate_report(
         patient_id=patient_id,
         evolucoes_ids=[e.id for e in evolucoes],
         assinado_por_id=current_user.id,
-        periodo_inicio=periodo_inicio.strftime("%d/%m/%Y"),
-        periodo_fim=periodo_fim.strftime("%d/%m/%Y"),
+        periodo_inicio=payload.periodo_inicio.strftime("%d/%m/%Y"),
+        periodo_fim=payload.periodo_fim.strftime("%d/%m/%Y"),
     )
 
     return report
@@ -151,12 +152,16 @@ def _gerar_relatorio_completo(
             for e in evolucoes
         ]
 
+        import json
+        pareceres_dict = json.loads(report.pareceres_json) if report.pareceres_json else None
+
         # Gera PDF
         pdf_path = pdf_service.gerar_relatorio_semestral(
             paciente_data=patient_data,
             profissional_data=profissional_data,
             evolucoes=evolucoes_para_pdf,
             sintese_global=sintese,
+            pareceres=pareceres_dict,
             periodo_inicio=periodo_inicio,
             periodo_fim=periodo_fim,
             report_id=str(report_id)
@@ -186,14 +191,47 @@ def download_report_pdf(
         ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN
     ))
 ):
-    """Download do PDF do relatório semestral."""
+    """Download do PDF do relatório semestral. Se o arquivo físico não existir, reconstrói."""
     report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Relatório não encontrado")
-    if not report.pdf_path or not os.path.exists(report.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF ainda não gerado ou arquivo não encontrado")
 
     patient = db.query(Patient).filter(Patient.id == report.paciente_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Paciente associado não encontrado")
+
+    # Se o arquivo não existir fisicamente, gera um novo no local esperado
+    if not report.pdf_path or not os.path.exists(report.pdf_path):
+        from app.models.professional import Professional
+        profissional = db.query(Professional).filter(Professional.id == report.assinado_por).first()
+        
+        patient_data = {
+            "nome": patient.nome,
+            "data_nascimento": patient.data_nascimento.strftime("%d/%m/%Y"),
+            "idade": patient.idade,
+            "diagnostico": patient.diagnostico_principal,
+            "responsavel": patient.nome_responsavel,
+        }
+        
+        profissional_data = {
+            "nome": profissional.nome if profissional else "Neuropediatra",
+            "registro": profissional.registro_conselho or "",
+            "especialidade": profissional.especialidade.value if profissional and profissional.especialidade else "",
+        }
+
+        # Reconstrói arquivo
+        pdf_path = pdf_service.gerar_relatorio_semestral(
+            paciente_data=patient_data,
+            profissional_data=profissional_data,
+            evolucoes=[],
+            sintese_global=report.sintese_global or "Síntese global não disponível.",
+            periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
+            periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
+            report_id=str(report.id)
+        )
+        report.pdf_path = pdf_path
+        db.commit()
+
     filename = f"relatorio_{patient.nome.replace(' ', '_').lower()}_{report.periodo_fim}.pdf"
 
     return FileResponse(

@@ -167,6 +167,11 @@ class ReportCreate(BaseModel):
     periodo_fim: date
     cita_id: Optional[UUID] = None
 
+class ReportGenerateRequest(BaseModel):
+    periodo_inicio: date
+    periodo_fim: date
+    pareceres: Optional[dict] = None
+
 class ReportUpdate(BaseModel):
     sintese_global: Optional[str] = None
     pareceres_json: Optional[str] = None

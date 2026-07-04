@@ -6,9 +6,10 @@ import os
 import httpx
 import streamlit as st
 import sys
+from datetime import date
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from components.auth import get_auth_headers  # noqa
+from components.auth import get_auth_headers, get_role  # noqa
 
 BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
 
@@ -38,6 +39,20 @@ def post_api(endpoint: str, data: dict) -> tuple[bool, dict]:
             return False, {"detail": r.text}
     except Exception as e:
         st.error(f"⚠️ Erro ao conectar com API POST {endpoint}: {e}")
+        return False, {"detail": str(e)}
+
+
+def patch_api(endpoint: str, data: dict) -> tuple[bool, dict]:
+    try:
+        import httpx
+        r = httpx.patch(f"{BACKEND_URL}/api/v1{endpoint}", json=data, headers=get_auth_headers(), timeout=10)
+        if r.status_code in [200, 201]:
+            return True, r.json()
+        else:
+            st.error(f"❌ Erro na API PATCH {endpoint} (HTTP {r.status_code}): {r.text}")
+            return False, {"detail": r.text}
+    except Exception as e:
+        st.error(f"⚠️ Erro ao conectar com API PATCH {endpoint}: {e}")
         return False, {"detail": str(e)}
 
 
@@ -98,6 +113,57 @@ with tab1:
                     alerta = p.get("alerta_laudo_enviado", False)
                     if alerta:
                         st.caption("📱 Alerta WhatsApp enviado")
+
+                # Permite edição se for admin ou recepcao
+                if get_role() in ["admin", "recepcao"]:
+                    with st.expander("✏️ **Editar Cadastro do Paciente**"):
+                        with st.form(f"form_editar_{p['id']}"):
+                            ec1, ec2 = st.columns(2)
+                            with ec1:
+                                enome = st.text_input("Nome completo", value=p.get("nome", ""))
+                                edata_nascimento = st.date_input(
+                                    "Data de nascimento",
+                                    value=date.fromisoformat(p["data_nascimento"]) if p.get("data_nascimento") else date.today()
+                                )
+                                ediagnostico = st.selectbox(
+                                    "Diagnóstico principal",
+                                    ["TEA", "TEA + TDAH", "TDAH", "Outro"],
+                                    index=["TEA", "TEA + TDAH", "TDAH", "Outro"].index(p.get("diagnostico_principal", "TEA")) if p.get("diagnostico_principal") in ["TEA", "TEA + TDAH", "TDAH", "Outro"] else 0
+                                )
+                            with ec2:
+                                enome_resp = st.text_input("Nome do responsável", value=p.get("nome_responsavel", ""))
+                                eparentesco = st.selectbox(
+                                    "Parentesco",
+                                    ["Mãe", "Pai", "Avô/Avó", "Outro"],
+                                    index=["Mãe", "Pai", "Avô/Avó", "Outro"].index(p.get("parentesco_responsavel", "Mãe")) if p.get("parentesco_responsavel") in ["Mãe", "Pai", "Avô/Avó", "Outro"] else 0
+                                )
+                                ewhatsapp = st.text_input("WhatsApp do responsável", value=p.get("whatsapp_responsavel", ""))
+                            
+                            eemail = st.text_input("E-mail do responsável", value=p.get("email_responsavel") or "")
+                            eobservacoes = st.text_area("Observações", value=p.get("observacoes") or "")
+                            
+                            submit_edit = st.form_submit_button("💾 Salvar Alterações", type="primary", use_container_width=True)
+                            
+                            if submit_edit:
+                                if not enome or not enome_resp or not ewhatsapp:
+                                    st.error("Preencha todos os campos obrigatórios.")
+                                else:
+                                    payload = {
+                                        "nome": enome,
+                                        "data_nascimento": str(edata_nascimento),
+                                        "diagnostico_principal": ediagnostico,
+                                        "nome_responsavel": enome_resp,
+                                        "parentesco_responsavel": eparentesco,
+                                        "whatsapp_responsavel": ewhatsapp,
+                                        "email_responsavel": eemail or None,
+                                        "observacoes": eobservacoes or None,
+                                    }
+                                    ok, resp = patch_api(f"/patients/{p['id']}", payload)
+                                    if ok:
+                                        st.success(f"✅ Cadastro de {enome} atualizado com sucesso!")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Erro: {resp.get('detail', 'Erro desconhecido')}")
 
 
 # ── Tab 2: Novo Paciente ──────────────────────────────────
