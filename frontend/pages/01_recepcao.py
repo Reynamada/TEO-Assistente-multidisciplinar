@@ -239,7 +239,10 @@ with tab3:
             with col2:
                 st.markdown(f"📋 Último laudo: **{ultimo_laudo or 'Não registrado'}**")
                 if isinstance(dias, int):
-                    st.error(f"⏱️ **{dias} dias** atrás") if dias >= 150 else st.warning(f"⏱️ **{dias} dias** atrás")
+                    if dias >= 150:
+                        st.error(f"⏱️ **{dias} dias** atrás")
+                    else:
+                        st.warning(f"⏱️ **{dias} dias** atrás")
             with col3:
                 alerta_enviado = p.get("alerta_laudo_enviado", False)
                 if alerta_enviado:
