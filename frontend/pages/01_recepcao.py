@@ -116,7 +116,8 @@ with tab1:
 
                 # Permite edição se for admin ou recepcao
                 if get_role() in ["admin", "recepcao"]:
-                    with st.expander("✏️ **Editar Cadastro do Paciente**"):
+                    st.divider()
+                    if st.toggle("✏️ **Editar Cadastro do Paciente**", key=f"toggle_edit_{p['id']}"):
                         with st.form(f"form_editar_{p['id']}"):
                             ec1, ec2 = st.columns(2)
                             with ec1:
