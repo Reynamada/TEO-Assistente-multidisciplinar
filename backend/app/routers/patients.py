@@ -49,7 +49,7 @@ def create_patient(
     if existing:
         raise HTTPException(status_code=400, detail="WhatsApp já cadastrado para outro paciente")
 
-    patient = Patient(**data.model_dump())
+    patient = Patient(**data.dict())
     db.add(patient)
     db.commit()
     db.refresh(patient)
@@ -81,7 +81,7 @@ def update_patient(
     if not patient:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
 
-    update_data = data.model_dump(exclude_unset=True)
+    update_data = data.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(patient, key, value)
 

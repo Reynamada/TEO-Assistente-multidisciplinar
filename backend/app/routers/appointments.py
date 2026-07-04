@@ -42,7 +42,7 @@ def create_appointment(
     ))
 ):
     """Cria novo agendamento manualmente."""
-    appointment = Appointment(**data.model_dump())
+    appointment = Appointment(**data.dict())
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
@@ -61,7 +61,7 @@ def update_appointment(
     if not appointment:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
 
-    for key, value in data.model_dump(exclude_unset=True).items():
+    for key, value in data.dict(exclude_unset=True).items():
         setattr(appointment, key, value)
 
     # Se confirmado, atualiza data_ultimo_laudo do paciente
