@@ -5,6 +5,7 @@ Ponto de entrada com autenticação e roteamento por role.
 import streamlit as st
 import os
 import sys
+import httpx
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
