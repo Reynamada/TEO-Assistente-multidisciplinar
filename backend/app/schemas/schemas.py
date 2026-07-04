@@ -46,7 +46,8 @@ class PatientResponse(PatientBase):
     ativo: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 
 # ─────────────────────────────────────────────
@@ -76,7 +77,8 @@ class ProfessionalResponse(ProfessionalBase):
     ativo: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 class Token(BaseModel):
     access_token: str
@@ -114,7 +116,8 @@ class EvolutionResponse(EvolutionBase):
     whatsapp_enviado_em: Optional[datetime] = None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 class TranslateEvolutionRequest(BaseModel):
     """Request para traduzir notas técnicas via LLM sem salvar."""
@@ -150,7 +153,8 @@ class AppointmentResponse(AppointmentBase):
     alerta_enviado_em: Optional[datetime] = None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 
 # ─────────────────────────────────────────────
@@ -179,4 +183,5 @@ class ReportResponse(BaseModel):
     pdf_gerado_em: Optional[datetime] = None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
