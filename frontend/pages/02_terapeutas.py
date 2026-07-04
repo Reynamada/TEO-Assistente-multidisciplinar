@@ -17,8 +17,13 @@ BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://loc
 def get_api(endpoint: str):
     try:
         r = httpx.get(f"{BACKEND_URL}/api/v1{endpoint}", headers=get_auth_headers(), timeout=10)
-        return r.json() if r.status_code == 200 else []
-    except Exception:
+        if r.status_code == 200:
+            return r.json()
+        else:
+            st.error(f"❌ Erro na API GET {endpoint} (HTTP {r.status_code}): {r.text}")
+            return []
+    except Exception as e:
+        st.error(f"⚠️ Erro ao conectar com API GET {endpoint}: {e}")
         return []
 
 
