@@ -191,7 +191,10 @@ def download_report_pdf(
         ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN, ProfessionalRole.RECEPCAO
     ))
 ):
-    """Download do PDF do relatório semestral. Se o arquivo físico não existir, reconstrói."""
+    """Download do PDF do relatório semestral. Gera/regenera o PDF se necessário."""
+    from loguru import logger
+    import json
+
     report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Relatório não encontrado")
@@ -200,37 +203,48 @@ def download_report_pdf(
     if not patient:
         raise HTTPException(status_code=404, detail="Paciente associado não encontrado")
 
-    # Se o arquivo não existir fisicamente, gera um novo no local esperado
+    # Se o arquivo não existir fisicamente, gera/regenera
     if not report.pdf_path or not os.path.exists(report.pdf_path):
-        from app.models.professional import Professional
-        profissional = db.query(Professional).filter(Professional.id == report.assinado_por).first()
-        
-        patient_data = {
-            "nome": patient.nome,
-            "data_nascimento": patient.data_nascimento.strftime("%d/%m/%Y"),
-            "idade": patient.idade,
-            "diagnostico": patient.diagnostico_principal,
-            "responsavel": patient.nome_responsavel,
-        }
-        
-        profissional_data = {
-            "nome": profissional.nome if profissional else "Neuropediatra",
-            "registro": profissional.registro_conselho or "",
-            "especialidade": profissional.especialidade.value if profissional and profissional.especialidade else "",
-        }
+        logger.info(f"PDF não encontrado para relatório {report_id}. Gerando agora...")
+        try:
+            from app.models.professional import Professional
+            profissional = db.query(Professional).filter(Professional.id == report.assinado_por).first()
 
-        # Reconstrói arquivo
-        pdf_path = pdf_service.gerar_relatorio_semestral(
-            paciente_data=patient_data,
-            profissional_data=profissional_data,
-            evolucoes=[],
-            sintese_global=report.sintese_global or "Síntese global não disponível.",
-            periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
-            periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
-            report_id=str(report.id)
-        )
-        report.pdf_path = pdf_path
-        db.commit()
+            patient_data = {
+                "nome": patient.nome,
+                "data_nascimento": patient.data_nascimento.strftime("%d/%m/%Y"),
+                "idade": patient.idade,
+                "diagnostico": patient.diagnostico_principal,
+                "responsavel": patient.nome_responsavel,
+            }
+
+            profissional_data = {
+                "nome": profissional.nome if profissional else "Neuropediatra",
+                "registro": profissional.registro_conselho or "",
+                "especialidade": profissional.especialidade.value if profissional and profissional.especialidade else "",
+            }
+
+            pareceres_dict = json.loads(report.pareceres_json) if report.pareceres_json else None
+
+            pdf_path = pdf_service.gerar_relatorio_semestral(
+                paciente_data=patient_data,
+                profissional_data=profissional_data,
+                evolucoes=[],
+                sintese_global=report.sintese_global or "Síntese global não disponível.",
+                pareceres=pareceres_dict,
+                periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
+                periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
+                report_id=str(report.id)
+            )
+            report.pdf_path = pdf_path
+            db.commit()
+            logger.info(f"PDF regenerado com sucesso: {pdf_path}")
+        except Exception as e:
+            logger.error(f"Erro ao gerar PDF para relatório {report_id}: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Não foi possível gerar o PDF: {str(e)}"
+            )
 
     filename = f"relatorio_{patient.nome.replace(' ', '_').lower()}_{report.periodo_fim}.pdf"
 

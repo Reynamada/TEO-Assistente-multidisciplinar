@@ -106,8 +106,11 @@ def gerar_relatorio_semestral(
                     page = browser.new_page()
                     page.set_content(html_content)
                     page.emulate_media(media="print")
-                    # Wait for network idle/fonts to load
-                    page.wait_for_load_state("networkidle")
+                    # Wait for network idle/fonts to load (10s timeout max)
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=10000)
+                    except Exception:
+                        pass  # Continue even if timeout; fonts may be unavailable in server
                     page.pdf(
                         path=str(pdf_path),
                         format="A4",
