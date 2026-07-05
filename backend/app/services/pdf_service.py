@@ -49,26 +49,82 @@ def gerar_relatorio_semestral(
     Returns:
         Caminho absoluto do PDF gerado
     """
-    # Placeholder PDF generation (no weasyprint)
     try:
         # Prepare output directory
         reports_dir = Path(settings.reports_dir)
         reports_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create a dummy PDF file path
+        # Create a unique PDF file path
         nome_limpo = paciente_data.get("nome", "paciente").replace(" ", "_").lower()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         pdf_filename = f"relatorio_semestral_{nome_limpo}_{timestamp}.pdf"
         pdf_path = reports_dir / pdf_filename
 
-        # Write minimal PDF header to create a valid (though empty) PDF file
-        with open(pdf_path, "wb") as f:
-            f.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF")
+        # Render HTML template via Jinja2
+        env = _get_template_env()
+        template = env.get_template("relatorio_semestral.html")
 
-        logger.info(f"Generated placeholder PDF for {paciente_data.get('nome')} at {pdf_path}")
-        return str(pdf_path)
+        # Prepare context data
+        data_geracao = datetime.now().strftime("%d/%m/%Y")
+        num_sessoes = len(evolucoes)
+
+        context = {
+            "clinic_name": settings.clinic_name,
+            "paciente": paciente_data,
+            "profissional": profissional_data,
+            "evolucoes": evolucoes,
+            "sintese_global": sintese_global,
+            "pareceres": pareceres,
+            "periodo_inicio": periodo_inicio,
+            "periodo_fim": periodo_fim,
+            "data_geracao": data_geracao,
+            "num_sessoes": num_sessoes,
+            "report_id": report_id,
+        }
+
+        html_content = template.render(**context)
+
+        # Try generating using WeasyPrint
+        try:
+            logger.info("Attempting PDF generation using WeasyPrint...")
+            from weasyprint import HTML
+            HTML(string=html_content).write_pdf(target=str(pdf_path))
+            logger.info(f"Successfully generated PDF using WeasyPrint at {pdf_path}")
+            return str(pdf_path)
+        except Exception as wp_error:
+            logger.warning(
+                f"WeasyPrint generation failed or not configured (GTK error?): {wp_error}. "
+                "Falling back to Playwright..."
+            )
+            
+            # Fallback to Playwright
+            try:
+                from playwright.sync_api import sync_playwright
+                with sync_playwright() as p:
+                    # Launch chromium in headless mode
+                    browser = p.chromium.launch(headless=True)
+                    page = browser.new_page()
+                    page.set_content(html_content)
+                    page.emulate_media(media="print")
+                    # Wait for network idle/fonts to load
+                    page.wait_for_load_state("networkidle")
+                    page.pdf(
+                        path=str(pdf_path),
+                        format="A4",
+                        print_background=True,
+                        margin={"top": "0mm", "bottom": "0mm", "left": "0mm", "right": "0mm"}
+                    )
+                    browser.close()
+                logger.info(f"Successfully generated PDF using Playwright fallback at {pdf_path}")
+                return str(pdf_path)
+            except Exception as pw_error:
+                logger.error(f"Playwright PDF generation failed: {pw_error}")
+                # Re-raise the original WeasyPrint error or a custom error combining both
+                raise RuntimeError(
+                    f"Failed to generate PDF. WeasyPrint error: {wp_error}. Playwright error: {pw_error}"
+                )
     except Exception as e:
-        logger.error(f"Erro ao gerar PDF placeholder: {e}")
+        logger.error(f"Erro ao gerar PDF: {e}")
         raise
 
 
@@ -76,3 +132,4 @@ def pdf_para_bytes(pdf_path: str) -> bytes:
     """Lê um PDF gerado e retorna como bytes (para streaming HTTP)."""
     with open(pdf_path, "rb") as f:
         return f.read()
+
