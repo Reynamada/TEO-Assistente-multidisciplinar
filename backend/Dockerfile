@@ -2,10 +2,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libharfbuzz0b \
+    libcairo2 \
+    libffi-dev \
+    libjpeg-dev \
+    libopenjp2-7-dev \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
