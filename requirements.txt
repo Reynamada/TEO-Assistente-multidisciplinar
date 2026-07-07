@@ -21,6 +21,7 @@ python-dotenv==1.0.1
 pandas==2.2.3
 loguru==0.7.2
 tenacity>=8.1.0,<9
+weasyprint>=62.0
 
 # Frontend dependencies
 streamlit==1.38.0

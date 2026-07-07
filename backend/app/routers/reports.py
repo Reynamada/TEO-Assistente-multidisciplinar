@@ -178,7 +178,16 @@ def _gerar_relatorio_completo(
 
     except Exception as e:
         from loguru import logger
-        logger.error(f"❌ Erro ao gerar relatório {report_id}: {e}")
+        import traceback
+        logger.error(f"❌ Erro ao gerar relatório {report_id}: {e}\n{traceback.format_exc()}")
+        # Mark report with error so the download endpoint can give a meaningful message
+        try:
+            report = db.query(Report).filter(Report.id == report_id).first()
+            if report:
+                report.sintese_global = report.sintese_global or f"[ERRO] Falha na geração: {str(e)[:200]}"
+            db.commit()
+        except Exception:
+            pass
     finally:
         db.close()
 
@@ -226,10 +235,27 @@ def download_report_pdf(
 
             pareceres_dict = json.loads(report.pareceres_json) if report.pareceres_json else None
 
+            # Fetch the evolutions from the report period for regeneration
+            evolucoes = db.query(Evolution).filter(
+                Evolution.paciente_id == report.paciente_id,
+                Evolution.data_sessao >= report.periodo_inicio,
+                Evolution.data_sessao <= report.periodo_fim
+            ).order_by(Evolution.data_sessao.asc()).limit(48).all()
+
+            evolucoes_para_pdf = [
+                {
+                    "data": e.data_sessao.strftime("%d/%m/%Y"),
+                    "tipo": e.tipo_sessao or "",
+                    "notas": e.notas_tecnicas,
+                    "mensagem_pais": e.mensagem_pais or "",
+                }
+                for e in evolucoes
+            ]
+
             pdf_path = pdf_service.gerar_relatorio_semestral(
                 paciente_data=patient_data,
                 profissional_data=profissional_data,
-                evolucoes=[],
+                evolucoes=evolucoes_para_pdf,
                 sintese_global=report.sintese_global or "Síntese global não disponível.",
                 pareceres=pareceres_dict,
                 periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
@@ -240,7 +266,8 @@ def download_report_pdf(
             db.commit()
             logger.info(f"PDF regenerado com sucesso: {pdf_path}")
         except Exception as e:
-            logger.error(f"Erro ao gerar PDF para relatório {report_id}: {e}")
+            import traceback
+            logger.error(f"Erro ao gerar PDF para relatório {report_id}: {e}\n{traceback.format_exc()}")
             raise HTTPException(
                 status_code=503,
                 detail=f"Não foi possível gerar o PDF: {str(e)}"
