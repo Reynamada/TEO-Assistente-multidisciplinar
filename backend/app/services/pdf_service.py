@@ -31,20 +31,26 @@ def gerar_relatorio_semestral(
     pareceres: Optional[dict] = None,
     periodo_inicio: str = "",
     periodo_fim: str = "",
-    report_id: str = ""
+    report_id: str = "",
+    terapeutas: Optional[list] = None,
+    evolucoes_por_area: Optional[dict] = None,
+    stats_por_area: Optional[dict] = None,
 ) -> str:
     """
-    Gera o PDF do relatório semestral.
+    Gera o PDF do relatório semestral completo.
 
     Args:
         paciente_data: Dict com dados do paciente
         profissional_data: Dict com dados do neuropediatra
-        evolucoes: Lista de evoluções do período
-        sintese_global: Texto gerado pelo LLM
+        evolucoes: Lista de evoluções do período (enriquecidas com terapeuta info)
+        sintese_global: Texto gerado pelo LLM (com seções [SÍNTESE GLOBAL], [EVOLUÇÃO POR ÁREA], [LAUDO])
         pareceres: Dict com pareceres por área terapêutica
         periodo_inicio: Data início formatada
         periodo_fim: Data fim formatada
         report_id: UUID do relatório para nomear o arquivo
+        terapeutas: Lista de dicts com info dos terapeutas envolvidos
+        evolucoes_por_area: Dict com sessões agrupadas por área terapêutica
+        stats_por_area: Dict com contagem de sessões por área
 
     Returns:
         Caminho absoluto do PDF gerado
@@ -68,18 +74,28 @@ def gerar_relatorio_semestral(
         data_geracao = datetime.now().strftime("%d/%m/%Y")
         num_sessoes = len(evolucoes)
 
+        # Parse LLM output into sections
+        sintese_secoes = _parse_sintese_secoes(sintese_global)
+
         context = {
             "clinic_name": settings.clinic_name,
             "paciente": paciente_data,
             "profissional": profissional_data,
             "evolucoes": evolucoes,
-            "sintese_global": sintese_global,
+            "sintese_global": sintese_secoes.get("sintese_global", sintese_global),
+            "evolucao_por_area_texto": sintese_secoes.get("evolucao_por_area", ""),
+            "laudo_conclusivo": sintese_secoes.get("laudo_conclusivo", ""),
             "pareceres": pareceres,
             "periodo_inicio": periodo_inicio,
             "periodo_fim": periodo_fim,
             "data_geracao": data_geracao,
             "num_sessoes": num_sessoes,
             "report_id": report_id,
+            "terapeutas": terapeutas or [],
+            "evolucoes_por_area": evolucoes_por_area or {},
+            "stats_por_area": stats_por_area or {},
+            "num_areas": len(stats_por_area) if stats_por_area else 0,
+            "num_terapeutas": len(terapeutas) if terapeutas else 0,
         }
 
         html_content = template.render(**context)
@@ -129,6 +145,39 @@ def gerar_relatorio_semestral(
     except Exception as e:
         logger.error(f"Erro ao gerar PDF: {e}")
         raise
+
+
+def _parse_sintese_secoes(sintese_text: str) -> dict:
+    """
+    Parse o texto gerado pelo LLM em seções separadas.
+    Procura por marcadores [SÍNTESE GLOBAL], [EVOLUÇÃO POR ÁREA], [LAUDO CONCLUSIVO E RECOMENDAÇÕES].
+    """
+    import re
+    result = {
+        "sintese_global": sintese_text,  # fallback: texto inteiro
+        "evolucao_por_area": "",
+        "laudo_conclusivo": "",
+    }
+
+    # Try to split by section headers
+    sections = re.split(r'\[([^\]]+)\]', sintese_text)
+
+    if len(sections) >= 3:
+        # sections[0] = text before first header (usually empty)
+        # sections[1] = first header name, sections[2] = first section content
+        # sections[3] = second header name, sections[4] = second section content, etc.
+        for i in range(1, len(sections) - 1, 2):
+            header = sections[i].strip().upper()
+            content = sections[i + 1].strip() if i + 1 < len(sections) else ""
+
+            if "SÍNTESE" in header or "SINTESE" in header:
+                result["sintese_global"] = content
+            elif "EVOLUÇÃO" in header or "EVOLUCAO" in header or "ÁREA" in header:
+                result["evolucao_por_area"] = content
+            elif "LAUDO" in header or "RECOMENDA" in header or "CONCLUS" in header:
+                result["laudo_conclusivo"] = content
+
+    return result
 
 
 def pdf_para_bytes(pdf_path: str) -> bytes:

@@ -165,7 +165,9 @@ def sintetizar_relatorio(
     periodo_inicio: str,
     periodo_fim: str,
     evolucoes_resumo: list[dict],
-    pareceres: Optional[dict] = None
+    pareceres: Optional[dict] = None,
+    terapeutas_info: Optional[list] = None,
+    areas_atendimento: Optional[list] = None,
 ) -> str:
     """
     Módulo 3: Gera síntese global do relatório semestral a partir das evoluções.
@@ -177,13 +179,15 @@ def sintetizar_relatorio(
         periodo_fim: Data de fim do período (string formatada)
         evolucoes_resumo: Lista de dicts com resumo de cada evolução
         pareceres: Dict com pareceres por área terapêutica
+        terapeutas_info: Lista de strings com info dos terapeutas
+        areas_atendimento: Lista de áreas terapêuticas envolvidas
 
     Returns:
-        Texto narrativo da síntese global para o relatório
+        Texto narrativo completo da síntese global + laudo conclusivo
     """
     num_evolucoes = len(evolucoes_resumo)
     evolucoes_texto = "\n".join([
-        f"- {e.get('data', '')}: [{e.get('tipo', '')}] {e.get('resumo', '')}"
+        f"- {e.get('data', '')}: [{e.get('tipo', '')}] ({e.get('terapeuta', 'Terapeuta')}) {e.get('resumo', '')}"
         for e in evolucoes_resumo[:48]  # máximo 48 sessões
     ])
 
@@ -193,23 +197,51 @@ def sintetizar_relatorio(
             f"• {area}: {parecer}" for area, parecer in pareceres.items()
         ])
 
-    user_message = f"""Gere uma SÍNTESE GLOBAL para o relatório semestral de:
+    terapeutas_texto = ""
+    if terapeutas_info:
+        terapeutas_texto = "\n\nEQUIPE TERAPÊUTICA ENVOLVIDA:\n" + "\n".join([
+            f"• {t}" for t in terapeutas_info
+        ])
+
+    areas_texto = ""
+    if areas_atendimento:
+        areas_texto = f"\nÁREAS DE ATENDIMENTO: {', '.join(areas_atendimento)}"
+
+    user_message = f"""Gere um RELATÓRIO CLÍNICO SEMESTRAL COMPLETO para:
 
 PACIENTE: {nome_paciente} ({idade} anos)
 PERÍODO: {periodo_inicio} a {periodo_fim}
 TOTAL DE SESSÕES ANALISADAS: {num_evolucoes}
+{areas_texto}
+{terapeutas_texto}
 
 RESUMO DAS SESSÕES:
 {evolucoes_texto}
 {pareceres_texto}
 
-Produza um texto narrativo clínico de 3-4 parágrafos que:
-1. Descreva o estado geral do paciente no início do período
-2. Destaque os principais progressos alcançados
-3. Mencione as áreas que continuam em desenvolvimento
-4. Finalize com perspectivas positivas e recomendações gerais para o próximo semestre
+Produza um texto clínico profissional e completo com as seguintes seções, separadas por títulos entre colchetes:
 
-O texto deve ser profissional (para uso clínico pelo neuropediatra), mas empático."""
+[SÍNTESE GLOBAL]
+Um texto narrativo de 3-4 parágrafos que:
+1. Descreva o estado geral do paciente no início do período
+2. Destaque os principais progressos alcançados em cada área terapêutica
+3. Mencione a contribuição de cada terapeuta/especialidade
+4. Descreva as áreas que continuam em desenvolvimento
+
+[EVOLUÇÃO POR ÁREA]
+Para cada área terapêutica ({', '.join(areas_atendimento or ['todas'])}), escreva 2-3 frases descrevendo:
+- O ponto de partida do paciente nessa área
+- Os avanços específicos observados
+- Os desafios restantes
+
+[LAUDO CONCLUSIVO E RECOMENDAÇÕES]
+Um parágrafo conclusivo com:
+1. Avaliação geral do progresso do paciente
+2. Recomendações específicas para cada área terapêutica no próximo semestre
+3. Sugestões de continuidade ou ajuste da frequência de atendimentos
+4. Perspectivas positivas para o desenvolvimento do paciente
+
+O texto deve ser profissional (para uso clínico pelo neuropediatra), mas empático e positivo."""
 
     messages = [
         {"role": "system", "content": TEO_SYSTEM_PROMPT},
@@ -217,7 +249,7 @@ O texto deve ser profissional (para uso clínico pelo neuropediatra), mas empát
     ]
 
     logger.info(f"Gerando síntese semestral para: {nome_paciente} ({num_evolucoes} evoluções)")
-    resultado = _call_llm(messages, max_tokens=1200)
+    resultado = _call_llm(messages, max_tokens=2500)
     logger.info("Síntese semestral gerada com sucesso")
     return resultado
 

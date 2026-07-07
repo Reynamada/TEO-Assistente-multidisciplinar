@@ -91,6 +91,54 @@ def generate_report(
     return report
 
 
+def _preparar_dados_evolucoes(evolucoes, db):
+    """
+    Prepara dados enriquecidos das evoluções com info do terapeuta.
+    Retorna: (evolucoes_para_pdf, evolucoes_por_area, terapeutas_dict, stats_por_area)
+    """
+    from collections import defaultdict, OrderedDict
+
+    evolucoes_para_pdf = []
+    evolucoes_por_area = defaultdict(list)
+    terapeutas_set = {}  # key: profissional_id
+    stats_por_area = defaultdict(int)
+
+    for e in evolucoes:
+        # Busca terapeuta
+        prof = db.query(Professional).filter(Professional.id == e.profissional_id).first()
+        terapeuta_nome = prof.nome if prof else "Terapeuta"
+        terapeuta_especialidade = prof.especialidade.value if prof and prof.especialidade else (e.tipo_sessao or "")
+        terapeuta_registro = prof.registro_conselho or "" if prof else ""
+        area = e.tipo_sessao or terapeuta_especialidade or "Sessão"
+
+        ev_data = {
+            "data": e.data_sessao.strftime("%d/%m/%Y"),
+            "tipo": area,
+            "notas": e.notas_tecnicas,
+            "mensagem_pais": e.mensagem_pais or "",
+            "terapeuta_nome": terapeuta_nome,
+            "terapeuta_especialidade": terapeuta_especialidade,
+            "terapeuta_registro": terapeuta_registro,
+            "duracao": e.duracao_minutos or "—",
+        }
+        evolucoes_para_pdf.append(ev_data)
+        evolucoes_por_area[area].append(ev_data)
+        stats_por_area[area] += 1
+
+        if prof and str(prof.id) not in terapeutas_set:
+            terapeutas_set[str(prof.id)] = {
+                "nome": prof.nome,
+                "especialidade": prof.especialidade.value if prof.especialidade else "",
+                "registro": prof.registro_conselho or "",
+                "num_sessoes": 0,
+            }
+        if prof:
+            terapeutas_set[str(prof.id)]["num_sessoes"] += 1
+
+    terapeutas_list = list(terapeutas_set.values())
+    return evolucoes_para_pdf, dict(evolucoes_por_area), terapeutas_list, dict(stats_por_area)
+
+
 def _gerar_relatorio_completo(
     report_id: UUID,
     patient_id: UUID,
@@ -99,7 +147,7 @@ def _gerar_relatorio_completo(
     periodo_inicio: str,
     periodo_fim: str
 ):
-    """Background task: gera síntese LLM + PDF."""
+    """Background task: gera síntese LLM + PDF completo."""
     from app.database import SessionLocal
     from loguru import logger
 
@@ -108,25 +156,46 @@ def _gerar_relatorio_completo(
         patient = db.query(Patient).filter(Patient.id == patient_id).first()
         profissional = db.query(Professional).filter(Professional.id == assinado_por_id).first()
         report = db.query(Report).filter(Report.id == report_id).first()
-        evolucoes = db.query(Evolution).filter(Evolution.id.in_(evolucoes_ids)).all()
+        evolucoes = db.query(Evolution).filter(
+            Evolution.id.in_(evolucoes_ids)
+        ).order_by(Evolution.data_sessao.asc()).all()
 
-        # Prepara resumo das evoluções para o LLM
+        # Prepara dados enriquecidos
+        evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \
+            _preparar_dados_evolucoes(evolucoes, db)
+
+        # Prepara resumo das evoluções para o LLM (com nomes de terapeutas)
         evolucoes_resumo = [
             {
                 "data": e.data_sessao.strftime("%d/%m/%Y"),
                 "tipo": e.tipo_sessao or "Sessão",
-                "resumo": e.notas_tecnicas[:200]
+                "resumo": e.notas_tecnicas[:300],
+                "terapeuta": db.query(Professional).filter(
+                    Professional.id == e.profissional_id
+                ).first().nome if e.profissional_id else "Terapeuta"
             }
             for e in evolucoes
         ]
 
-        # Gera síntese via LLM
+        # Prepara info de terapeutas para o LLM
+        terapeutas_info = [
+            f"{t['nome']} ({t['especialidade']}, {t['num_sessoes']} sessões)"
+            for t in terapeutas_list
+        ]
+
+        # Gera síntese via LLM (enriquecida)
+        import json
+        pareceres_dict = json.loads(report.pareceres_json) if report.pareceres_json else None
+
         sintese = llm_service.sintetizar_relatorio(
             nome_paciente=patient.nome,
             idade=patient.idade,
             periodo_inicio=periodo_inicio,
             periodo_fim=periodo_fim,
             evolucoes_resumo=evolucoes_resumo,
+            pareceres=pareceres_dict,
+            terapeutas_info=terapeutas_info,
+            areas_atendimento=list(stats_por_area.keys()),
         )
 
         # Prepara dados para o template PDF
@@ -142,18 +211,6 @@ def _gerar_relatorio_completo(
             "registro": profissional.registro_conselho or "",
             "especialidade": profissional.especialidade.value if profissional and profissional.especialidade else "",
         }
-        evolucoes_para_pdf = [
-            {
-                "data": e.data_sessao.strftime("%d/%m/%Y"),
-                "tipo": e.tipo_sessao or "",
-                "notas": e.notas_tecnicas,
-                "mensagem_pais": e.mensagem_pais or "",
-            }
-            for e in evolucoes
-        ]
-
-        import json
-        pareceres_dict = json.loads(report.pareceres_json) if report.pareceres_json else None
 
         # Gera PDF
         pdf_path = pdf_service.gerar_relatorio_semestral(
@@ -164,7 +221,10 @@ def _gerar_relatorio_completo(
             pareceres=pareceres_dict,
             periodo_inicio=periodo_inicio,
             periodo_fim=periodo_fim,
-            report_id=str(report_id)
+            report_id=str(report_id),
+            terapeutas=terapeutas_list,
+            evolucoes_por_area=evolucoes_por_area,
+            stats_por_area=stats_por_area,
         )
 
         # Atualiza relatório no banco
@@ -242,15 +302,9 @@ def download_report_pdf(
                 Evolution.data_sessao <= report.periodo_fim
             ).order_by(Evolution.data_sessao.asc()).limit(48).all()
 
-            evolucoes_para_pdf = [
-                {
-                    "data": e.data_sessao.strftime("%d/%m/%Y"),
-                    "tipo": e.tipo_sessao or "",
-                    "notas": e.notas_tecnicas,
-                    "mensagem_pais": e.mensagem_pais or "",
-                }
-                for e in evolucoes
-            ]
+            # Enrich with therapist data
+            evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \
+                _preparar_dados_evolucoes(evolucoes, db)
 
             pdf_path = pdf_service.gerar_relatorio_semestral(
                 paciente_data=patient_data,
@@ -260,7 +314,10 @@ def download_report_pdf(
                 pareceres=pareceres_dict,
                 periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
                 periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
-                report_id=str(report.id)
+                report_id=str(report.id),
+                terapeutas=terapeutas_list,
+                evolucoes_por_area=evolucoes_por_area,
+                stats_por_area=stats_por_area,
             )
             report.pdf_path = pdf_path
             db.commit()

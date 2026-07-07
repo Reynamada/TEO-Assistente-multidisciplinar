@@ -10,11 +10,15 @@
     :root {
       --primary: #4A90B8;
       --primary-dark: #2C6E9C;
+      --primary-light: #EBF8FF;
       --accent: #6CBF8A;
+      --accent-light: #F0FFF4;
       --text: #2D3748;
       --text-light: #718096;
       --bg-section: #F7FAFC;
       --border: #E2E8F0;
+      --warning: #ED8936;
+      --danger: #E53E3E;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -162,6 +166,83 @@
       margin: 20px 0 10px;
     }
 
+    h3 {
+      font-size: 10pt;
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin: 10px 0 5px;
+    }
+
+    /* ── ESTATÍSTICAS ───────────────────────── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      flex: 1;
+      min-width: 100px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .stat-number { font-size: 20pt; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 8pt; color: var(--text-light); margin-top: 4px; }
+
+    /* ── EQUIPE TERAPÊUTICA ─────────────────── */
+    .team-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 9pt;
+    }
+
+    .team-table th {
+      background: var(--primary);
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .team-table th:first-child { border-radius: 8px 0 0 0; }
+    .team-table th:last-child { border-radius: 0 8px 0 0; }
+
+    .team-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .team-table tr:nth-child(even) td { background: var(--bg-section); }
+
+    .badge-area {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-sessoes {
+      display: inline-block;
+      background: var(--accent-light);
+      color: #276749;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: 700;
+    }
+
     /* ── SÍNTESE GLOBAL ─────────────────────── */
     .sintese-section {
       background: linear-gradient(135deg, #EBF8FF 0%, #F0FFF4 100%);
@@ -190,43 +271,108 @@
       text-align: justify;
     }
 
-    /* ── SESSÕES / EVOLUÇÕES ────────────────── */
-    .evolution-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-      font-size: 9pt;
+    /* ── SESSÕES POR ÁREA ──────────────────── */
+    .area-section {
+      margin: 20px 0;
+      page-break-inside: avoid;
     }
 
-    .evolution-table th {
+    .area-header {
       background: var(--primary);
       color: white;
-      padding: 10px 12px;
-      text-align: left;
-      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 8px 8px 0 0;
+      font-weight: 700;
+      font-size: 11pt;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .evolution-table th:first-child { border-radius: 8px 0 0 0; }
-    .evolution-table th:last-child { border-radius: 0 8px 0 0; }
-
-    .evolution-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
-
-    .evolution-table tr:nth-child(even) td { background: var(--bg-section); }
-    .evolution-table tr:hover td { background: #EBF8FF; }
-
-    .badge-tipo {
-      display: inline-block;
-      background: #EBF8FF;
-      color: var(--primary-dark);
-      padding: 2px 8px;
+    .area-header .area-count {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 10px;
       border-radius: 10px;
       font-size: 8pt;
       font-weight: 600;
-      white-space: nowrap;
+    }
+
+    .session-card {
+      border: 1px solid var(--border);
+      border-top: none;
+      padding: 14px 18px;
+      background: white;
+    }
+
+    .session-card:last-child {
+      border-radius: 0 0 8px 8px;
+    }
+
+    .session-card:nth-child(even) {
+      background: var(--bg-section);
+    }
+
+    .session-meta {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 8px;
+      font-size: 8.5pt;
+      color: var(--text-light);
+      align-items: center;
+    }
+
+    .session-meta strong {
+      color: var(--text);
+      font-size: 9pt;
+    }
+
+    .session-notas {
+      font-size: 9pt;
+      line-height: 1.7;
+      margin-bottom: 6px;
+    }
+
+    .session-notas-label {
+      font-weight: 600;
+      color: var(--primary-dark);
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 3px;
+    }
+
+    .session-msg-pais {
+      background: #FEFCE8;
+      border: 1px solid #FEF08A;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 8.5pt;
+      line-height: 1.5;
+      color: #854D0E;
+      margin-top: 6px;
+    }
+
+    .session-msg-pais-label {
+      font-weight: 600;
+      font-size: 7.5pt;
+      color: #A16207;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    /* ── EVOLUÇÃO POR ÁREA (TEXTO LLM) ─────── */
+    .evolucao-area-section {
+      background: var(--bg-section);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 25px 30px;
+      margin: 20px 0;
+    }
+
+    .evolucao-area-section p {
+      margin-bottom: 10px;
+      line-height: 1.8;
+      text-align: justify;
     }
 
     /* ── PARECERES ──────────────────────────── */
@@ -247,6 +393,34 @@
 
     .parecer-card h3 { font-size: 10pt; color: var(--primary-dark); margin-bottom: 8px; }
     .parecer-card p { font-size: 9pt; line-height: 1.6; }
+
+    /* ── LAUDO CONCLUSIVO ───────────────────── */
+    .laudo-section {
+      background: linear-gradient(135deg, #F0FFF4 0%, #EBF8FF 100%);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 25px 30px;
+      margin: 25px 0;
+    }
+
+    .laudo-section .laudo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 8pt;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .laudo-section p {
+      margin-bottom: 12px;
+      line-height: 1.8;
+      text-align: justify;
+    }
 
     /* ── ASSINATURA ─────────────────────────── */
     .signature-section {
@@ -285,30 +459,14 @@
       padding-top: 8px;
     }
 
-    /* ── ESTATÍSTICAS ───────────────────────── */
-    .stats-row {
-      display: flex;
-      gap: 15px;
-      margin: 20px 0;
-    }
-
-    .stat-card {
-      flex: 1;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-
-    .stat-number { font-size: 22pt; font-weight: 700; color: var(--primary); }
-    .stat-label { font-size: 8pt; color: var(--text-light); margin-top: 4px; }
-
     @page {
       margin: 20mm 15mm 25mm 15mm;
       size: A4;
     }
+
+    /* Page break helpers */
+    .page-break { page-break-before: always; }
+    .avoid-break { page-break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -368,7 +526,7 @@
 <!-- ═══════════════════════════════════════════════════════ -->
 <div class="content">
 
-  <!-- Estatísticas do Período -->
+  <!-- ═══ 1. RESUMO DO PERÍODO ═══ -->
   <h1>📊 Resumo do Período</h1>
   <div class="stats-row">
     <div class="stat-card">
@@ -376,12 +534,12 @@
       <div class="stat-label">Sessões Realizadas</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">{{ periodo_inicio.split('/')[-1] if '/' in periodo_inicio else '—' }}</div>
-      <div class="stat-label">Ano de Referência</div>
+      <div class="stat-number">{{ num_terapeutas }}</div>
+      <div class="stat-label">Terapeutas</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">{{ profissional.especialidade or 'Multi' }}</div>
-      <div class="stat-label">Especialidades</div>
+      <div class="stat-number">{{ num_areas }}</div>
+      <div class="stat-label">Áreas Terapêuticas</div>
     </div>
     <div class="stat-card">
       <div class="stat-number">{{ paciente.idade }}a</div>
@@ -389,7 +547,52 @@
     </div>
   </div>
 
-  <!-- Síntese Global (gerada pelo TEO/LLM) -->
+  {% if stats_por_area %}
+  <h2>Sessões por Área Terapêutica</h2>
+  <div class="stats-row">
+    {% for area, count in stats_por_area.items() %}
+    <div class="stat-card">
+      <div class="stat-number" style="font-size: 18pt;">{{ count }}</div>
+      <div class="stat-label">{{ area }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+
+  <!-- ═══ 2. EQUIPE TERAPÊUTICA ═══ -->
+  {% if terapeutas %}
+  <h1>👥 Equipe Terapêutica</h1>
+  <table class="team-table">
+    <thead>
+      <tr>
+        <th style="width:35%">Profissional</th>
+        <th style="width:25%">Especialidade</th>
+        <th style="width:25%">Registro</th>
+        <th style="width:15%; text-align:center">Sessões</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in terapeutas %}
+      <tr>
+        <td><strong>{{ t.nome }}</strong></td>
+        <td><span class="badge-area">{{ t.especialidade }}</span></td>
+        <td>{{ t.registro }}</td>
+        <td style="text-align:center"><span class="badge-sessoes">{{ t.num_sessoes }}</span></td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td><strong>{{ profissional.nome }}</strong></td>
+        <td><span class="badge-area">{{ profissional.especialidade }}</span></td>
+        <td>{{ profissional.registro }}</td>
+        <td style="text-align:center"><span class="badge-sessoes">Responsável</span></td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+
+  <!-- ═══ 3. SÍNTESE GLOBAL (gerada pelo TEO/LLM) ═══ -->
   <h1>🧩 Síntese Global de Evolução</h1>
   <div class="sintese-section">
     <div class="teo-badge">🤖 Síntese gerada pelo TEO — IA Clínica</div>
@@ -400,9 +603,23 @@
     {% endfor %}
   </div>
 
-  <!-- Pareceres por Área (se existirem) -->
+
+  <!-- ═══ 4. EVOLUÇÃO POR ÁREA (texto LLM) ═══ -->
+  {% if evolucao_por_area_texto %}
+  <h1>📈 Evolução por Área Terapêutica</h1>
+  <div class="evolucao-area-section">
+    {% for paragrafo in evolucao_por_area_texto.split('\n\n') %}
+      {% if paragrafo.strip() %}
+        <p>{{ paragrafo.strip() }}</p>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+
+  <!-- ═══ 5. PARECERES POR ÁREA ═══ -->
   {% if pareceres %}
-  <h1>👥 Pareceres por Área Terapêutica</h1>
+  <h1>📝 Pareceres por Área Terapêutica</h1>
   <div class="parecer-grid">
     {% for area, parecer in pareceres.items() %}
     <div class="parecer-card">
@@ -413,28 +630,82 @@
   </div>
   {% endif %}
 
-  <!-- Registro de Evoluções -->
-  <h1>📝 Registro de Sessões ({{ num_sessoes }} sessões)</h1>
-  <table class="evolution-table">
+
+  <!-- ═══ 6. REGISTRO DE SESSÕES POR ÁREA ═══ -->
+  <div class="page-break"></div>
+  <h1>📋 Registro Completo de Sessões ({{ num_sessoes }} sessões)</h1>
+
+  {% for area, sessoes in evolucoes_por_area.items() %}
+  <div class="area-section">
+    <div class="area-header">
+      <span>{{ area }}</span>
+      <span class="area-count">{{ sessoes|length }} sessões</span>
+    </div>
+
+    {% for ev in sessoes %}
+    <div class="session-card avoid-break">
+      <div class="session-meta">
+        <span>📅 <strong>{{ ev.data }}</strong></span>
+        <span>👤 {{ ev.terapeuta_nome }}</span>
+        <span>🏷️ {{ ev.terapeuta_especialidade }}</span>
+        <span>⏱️ {{ ev.duracao }} min</span>
+      </div>
+
+      <div class="session-notas-label">📝 Notas Técnicas</div>
+      <div class="session-notas">{{ ev.notas }}</div>
+
+      {% if ev.mensagem_pais %}
+      <div class="session-msg-pais">
+        <div class="session-msg-pais-label">💬 Evolução enviada aos pais (WhatsApp)</div>
+        {{ ev.mensagem_pais }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <!-- Fallback: se não houver agrupamento por área, mostra tabela simples -->
+  {% if not evolucoes_por_area and evolucoes %}
+  <table class="team-table">
     <thead>
       <tr>
-        <th style="width:12%">Data</th>
-        <th style="width:20%">Tipo de Sessão</th>
-        <th style="width:68%">Notas Clínicas</th>
+        <th style="width:10%">Data</th>
+        <th style="width:15%">Tipo</th>
+        <th style="width:18%">Terapeuta</th>
+        <th style="width:57%">Notas Clínicas</th>
       </tr>
     </thead>
     <tbody>
       {% for ev in evolucoes %}
       <tr>
         <td><strong>{{ ev.data }}</strong></td>
-        <td><span class="badge-tipo">{{ ev.tipo or '—' }}</span></td>
+        <td><span class="badge-area">{{ ev.tipo or '—' }}</span></td>
+        <td>{{ ev.terapeuta_nome or '—' }}</td>
         <td>{{ ev.notas }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  {% endif %}
 
-  <!-- Assinatura -->
+
+  <!-- ═══ 7. LAUDO CONCLUSIVO E RECOMENDAÇÕES ═══ -->
+  {% if laudo_conclusivo %}
+  <div class="page-break"></div>
+  <h1>🏥 Laudo Conclusivo e Recomendações</h1>
+  <div class="laudo-section">
+    <div class="laudo-badge">📋 Laudo Clínico — Recomendações para o Próximo Semestre</div>
+    {% for paragrafo in laudo_conclusivo.split('\n\n') %}
+      {% if paragrafo.strip() %}
+        <p>{{ paragrafo.strip() }}</p>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+
+  <!-- ═══ 8. ASSINATURA ═══ -->
   <div class="signature-section">
     <div class="signature-box">
       <div class="signature-line"></div>
