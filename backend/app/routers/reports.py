@@ -28,7 +28,13 @@ def list_reports(
     db: Session = Depends(get_db),
     current_user: Professional = Depends(get_current_user)
 ):
-    """Lista histórico de relatórios de um paciente."""
+    """Lista histórico de relatórios de um paciente (Terapeutas veem apenas de pacientes vinculados)."""
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        from app.routers.patients import _get_allowed_patient_ids_for_terapeuta
+        allowed_ids = _get_allowed_patient_ids_for_terapeuta(db, current_user)
+        if patient_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Acesso proibido: este paciente não está vinculado a você.")
+
     return db.query(Report).filter(
         Report.paciente_id == patient_id
     ).order_by(Report.created_at.desc()).all()
@@ -257,7 +263,7 @@ def download_report_pdf(
     report_id: UUID,
     db: Session = Depends(get_db),
     current_user: Professional = Depends(require_role(
-        ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN, ProfessionalRole.RECEPCAO
+        ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN, ProfessionalRole.RECEPCAO, ProfessionalRole.TERAPEUTA
     ))
 ):
     """Download do PDF do relatório semestral. Gera/regenera o PDF se necessário."""
@@ -267,6 +273,12 @@ def download_report_pdf(
     report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Relatório não encontrado")
+
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        from app.routers.patients import _get_allowed_patient_ids_for_terapeuta
+        allowed_ids = _get_allowed_patient_ids_for_terapeuta(db, current_user)
+        if report.paciente_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Acesso proibido: o laudo deste paciente não está vinculado a você.")
 
     patient = db.query(Patient).filter(Patient.id == report.paciente_id).first()
     if not patient:

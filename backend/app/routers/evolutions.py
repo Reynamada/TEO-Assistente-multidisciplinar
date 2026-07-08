@@ -26,10 +26,11 @@ def list_evolutions(
     db: Session = Depends(get_db),
     current_user: Professional = Depends(get_current_user)
 ):
-    """Lista evoluções de um paciente (padrão: últimas 48 sessões)."""
-    return db.query(Evolution).filter(
-        Evolution.paciente_id == patient_id
-    ).order_by(Evolution.data_sessao.desc()).limit(limit).all()
+    """Lista evoluções de um paciente (Terapeutas veem apenas suas próprias sessões registradas)."""
+    query = db.query(Evolution).filter(Evolution.paciente_id == patient_id)
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        query = query.filter(Evolution.profissional_id == current_user.id)
+    return query.order_by(Evolution.data_sessao.desc()).limit(limit).all()
 
 
 @router.post("/", response_model=EvolutionResponse, status_code=201)

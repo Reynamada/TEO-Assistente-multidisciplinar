@@ -16,6 +16,28 @@ from app.services.auth_service import get_current_user, require_role
 router = APIRouter(prefix="/patients", tags=["Pacientes"])
 
 
+def _get_allowed_patient_ids_for_terapeuta(db: Session, current_user: Professional):
+    """Calcula os IDs de pacientes vinculados a um determinado terapeuta."""
+    from app.models.evolution import Evolution
+    from app.models.report import Report
+    # 1. IDs de pacientes com evoluções/sessões realizadas por este terapeuta
+    evo_p_ids = [r[0] for r in db.query(Evolution.paciente_id).filter(Evolution.profissional_id == current_user.id).distinct().all()]
+    
+    # 2. IDs de pacientes onde o laudo ou observações indicam a especialidade ou nome do terapeuta
+    spec_str = current_user.especialidade.value if current_user.especialidade else ""
+    spec_p_ids = []
+    if spec_str:
+        spec_reports = db.query(Report.paciente_id).filter(Report.pareceres_json.ilike(f"%{spec_str}%")).distinct().all()
+        spec_p_ids = [r[0] for r in spec_reports]
+        
+        spec_patients = db.query(Patient.id).filter(
+            Patient.observacoes.ilike(f"%{spec_str}%") | Patient.observacoes.ilike(f"%{current_user.nome}%")
+        ).all()
+        spec_p_ids.extend([p[0] for p in spec_patients])
+        
+    return set(evo_p_ids + spec_p_ids)
+
+
 @router.get("/", response_model=List[PatientResponse])
 def list_patients(
     skip: int = 0,
@@ -25,8 +47,13 @@ def list_patients(
     db: Session = Depends(get_db),
     current_user: Professional = Depends(get_current_user)
 ):
-    """Lista pacientes com filtro e busca."""
+    """Lista pacientes com filtro e busca (Terapeutas visualizam APENAS seus pacientes vinculados)."""
     query = db.query(Patient).filter(Patient.ativo == ativo)
+    
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        allowed_ids = _get_allowed_patient_ids_for_terapeuta(db, current_user)
+        query = query.filter(Patient.id.in_(allowed_ids))
+        
     if search:
         query = query.filter(
             Patient.nome.ilike(f"%{search}%") |
@@ -62,10 +89,16 @@ def get_patient(
     db: Session = Depends(get_db),
     current_user: Professional = Depends(get_current_user)
 ):
-    """Retorna dados de um paciente específico."""
+    """Retorna dados de um paciente específico (com verificação de vínculo para Terapeutas)."""
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
+        
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        allowed_ids = _get_allowed_patient_ids_for_terapeuta(db, current_user)
+        if patient_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Acesso proibido: este paciente não está vinculado a você.")
+            
     return patient
 
 
@@ -113,7 +146,11 @@ def laudos_vencendo(
     """Lista pacientes com laudos vencendo (regra dos 5 meses)."""
     from datetime import date, timedelta
     limite = date.today() - timedelta(days=dias)
-    return db.query(Patient).filter(
+    query = db.query(Patient).filter(
         Patient.ativo == True,
         Patient.data_ultimo_laudo <= limite
-    ).all()
+    )
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        allowed_ids = _get_allowed_patient_ids_for_terapeuta(db, current_user)
+        query = query.filter(Patient.id.in_(allowed_ids))
+    return query.all()

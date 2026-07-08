@@ -24,8 +24,12 @@ def list_appointments(
     db: Session = Depends(get_db),
     current_user: Professional = Depends(get_current_user)
 ):
-    """Lista agendamentos com filtros opcionais por status e paciente."""
+    """Lista agendamentos com filtros opcionais por status e paciente (Terapeutas veem apenas de vinculados)."""
     query = db.query(Appointment)
+    if current_user.role == ProfessionalRole.TERAPEUTA:
+        from app.routers.patients import _get_allowed_patient_ids_for_terapeuta
+        allowed_ids = _get_allowed_patient_ids_for_terapeuta(db, current_user)
+        query = query.filter(Appointment.paciente_id.in_(allowed_ids))
     if status:
         query = query.filter(Appointment.status == status)
     if patient_id:
