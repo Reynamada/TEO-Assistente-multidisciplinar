@@ -185,21 +185,29 @@ with tab3:
 
                 if rel.get("pdf_path"):
                     rel_id = rel["id"]
-                    try:
-                        pdf_url = f"{BACKEND_URL}/api/v1/reports/{rel_id}/download"
-                        r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=15)
-                        if r_pdf.status_code == 200:
-                            st.download_button(
-                                label="📄 Baixar PDF do Relatório",
-                                data=r_pdf.content,
-                                file_name=f"relatorio_{paciente_nome.replace(' ', '_').lower()}_{rel_id[:8]}.pdf",
-                                mime="application/pdf",
-                                key=f"dl_{rel_id}"
-                            )
-                        else:
-                            st.warning("⚠️ Arquivo PDF indisponível no servidor no momento.")
-                    except Exception as e:
-                        st.error(f"Erro ao obter bytes do PDF: {e}")
+                    key_np = f"pdf_np_{rel_id}"
+                    if key_np in st.session_state:
+                        st.download_button(
+                            label="💾 Baixar Arquivo PDF agora",
+                            data=st.session_state[key_np],
+                            file_name=f"relatorio_{paciente_nome.replace(' ', '_').lower()}_{rel_id[:8]}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_{rel_id}"
+                        )
+                    else:
+                        if st.button("📄 Gerar / Carregar PDF do Relatório", key=f"btn_np_{rel_id}", use_container_width=True):
+                            with st.spinner("⏳ Gerando relatório em PDF com WeasyPrint (aguarde alguns segundos)..."):
+                                try:
+                                    pdf_url = f"{BACKEND_URL}/api/v1/reports/{rel_id}/download"
+                                    r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=120)
+                                    if r_pdf.status_code == 200:
+                                        st.session_state[key_np] = r_pdf.content
+                                        st.success("✅ PDF carregado!")
+                                        st.rerun()
+                                    else:
+                                        st.warning("⚠️ Arquivo PDF indisponível no servidor no momento.")
+                                except Exception as e:
+                                    st.error(f"Erro ao obter bytes do PDF: {e}")
 
     st.divider()
 

@@ -307,22 +307,29 @@ with tab3:
                     st.markdown("---")
                     col_dl, _ = st.columns([2, 2])
                     with col_dl:
-                        try:
-                            if st.button("📥 Obter PDF do Laudo", key=f"dl_laudo_{rel_id}", use_container_width=True):
-                                r_pdf = httpx.get(
-                                    f"{BACKEND_URL}/api/v1/reports/{rel_id}/download",
-                                    headers=get_auth_headers(),
-                                    timeout=30
-                                )
-                                if r_pdf.status_code == 200:
-                                    st.download_button(
-                                        label="💾 Baixar Arquivo PDF agora",
-                                        data=r_pdf.content,
-                                        file_name=f"Laudo_Neuropediatra_{pac_laudo_label.split('—')[0].strip()}_{periodo.replace('/', '-')}.pdf",
-                                        mime="application/pdf",
-                                        key=f"save_pdf_{rel_id}"
-                                    )
-                                else:
-                                    st.error(f"Erro ao obter PDF: {r_pdf.text}")
-                        except Exception as e_pdf:
-                            st.error(f"Erro no download: {e_pdf}")
+                        key_bytes_ter = f"pdf_ter_{rel_id}"
+                        if key_bytes_ter in st.session_state:
+                            st.download_button(
+                                label="💾 Baixar Arquivo PDF agora",
+                                data=st.session_state[key_bytes_ter],
+                                file_name=f"Laudo_Neuropediatra_{pac_laudo_label.split('—')[0].strip()}_{periodo.replace('/', '-')}.pdf",
+                                mime="application/pdf",
+                                key=f"save_pdf_{rel_id}"
+                            )
+                        else:
+                            if st.button("📥 Obter / Gerar PDF do Laudo", key=f"dl_laudo_{rel_id}", use_container_width=True):
+                                with st.spinner("⏳ Gerando laudo em PDF com WeasyPrint (aguarde uns segundos)..."):
+                                    try:
+                                        r_pdf = httpx.get(
+                                            f"{BACKEND_URL}/api/v1/reports/{rel_id}/download",
+                                            headers=get_auth_headers(),
+                                            timeout=120
+                                        )
+                                        if r_pdf.status_code == 200:
+                                            st.session_state[key_bytes_ter] = r_pdf.content
+                                            st.success("✅ Laudo PDF carregado!")
+                                            st.rerun()
+                                        else:
+                                            st.error(f"Erro ao obter PDF: HTTP {r_pdf.status_code}")
+                                    except Exception as e_pdf:
+                                        st.error(f"⚠️ Erro ao carregar PDF: {e_pdf}")

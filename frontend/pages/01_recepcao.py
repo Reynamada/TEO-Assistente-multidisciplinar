@@ -159,27 +159,35 @@ with tab1:
                         for rp in reps:
                             if rp.get("pdf_path"):
                                 rp_id = rp["id"]
+                                p_fim = rp.get("periodo_fim", "")
                                 try:
-                                    pdf_url = f"{BACKEND_URL}/api/v1/reports/{rp_id}/download"
-                                    r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=15)
-                                    if r_pdf.status_code == 200:
-                                        p_fim = rp.get("periodo_fim", "")
-                                        try:
-                                            p_fim_formatted = date.fromisoformat(p_fim).strftime("%d/%m/%Y")
-                                        except Exception:
-                                            p_fim_formatted = p_fim
-                                        
-                                        st.download_button(
-                                            label=f"⬇️ Relatório até {p_fim_formatted}",
-                                            data=r_pdf.content,
-                                            file_name=f"relatorio_{p['nome'].replace(' ', '_').lower()}_{rp_id[:8]}.pdf",
-                                            mime="application/pdf",
-                                            key=f"dl_rec_{rp_id}"
-                                        )
-                                    else:
-                                        st.caption(f"⏳ PDF indisponível (HTTP {r_pdf.status_code})")
-                                except Exception as e:
-                                    st.caption(f"⚠️ Erro ao carregar PDF: {e}")
+                                    p_fim_formatted = date.fromisoformat(p_fim).strftime("%d/%m/%Y")
+                                except Exception:
+                                    p_fim_formatted = p_fim
+
+                                key_bytes = f"pdf_bytes_{rp_id}"
+                                if key_bytes in st.session_state:
+                                    st.download_button(
+                                        label=f"💾 Baixar Relatório até {p_fim_formatted}",
+                                        data=st.session_state[key_bytes],
+                                        file_name=f"relatorio_{p['nome'].replace(' ', '_').lower()}_{rp_id[:8]}.pdf",
+                                        mime="application/pdf",
+                                        key=f"dl_rec_{rp_id}"
+                                    )
+                                else:
+                                    if st.button(f"📄 Preparar PDF (Até {p_fim_formatted})", key=f"btn_prep_{rp_id}", use_container_width=True):
+                                        with st.spinner("⏳ Gerando/carregando PDF com WeasyPrint (aguarde uns instantes)..."):
+                                            try:
+                                                pdf_url = f"{BACKEND_URL}/api/v1/reports/{rp_id}/download"
+                                                r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=120)
+                                                if r_pdf.status_code == 200:
+                                                    st.session_state[key_bytes] = r_pdf.content
+                                                    st.success("✅ PDF pronto para download!")
+                                                    st.rerun()
+                                                else:
+                                                    st.error(f"❌ PDF indisponível (HTTP {r_pdf.status_code})")
+                                            except Exception as e:
+                                                st.error(f"⚠️ Erro ao carregar PDF: {e}")
 
                 # Permite edição se for admin ou recepcao
                 if get_role() in ["admin", "recepcao"]:
