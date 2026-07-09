@@ -166,6 +166,12 @@ def _gerar_relatorio_completo(
             Evolution.id.in_(evolucoes_ids)
         ).order_by(Evolution.data_sessao.asc()).all()
 
+        if not evolucoes and patient_id:
+            evolucoes = db.query(Evolution).filter(
+                Evolution.paciente_id == patient_id
+            ).order_by(Evolution.data_sessao.desc()).limit(48).all()
+            evolucoes = list(reversed(evolucoes))
+
         # Prepara dados enriquecidos
         evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \
             _preparar_dados_evolucoes(evolucoes, db)
@@ -313,6 +319,12 @@ def download_report_pdf(
                 Evolution.data_sessao >= report.periodo_inicio,
                 Evolution.data_sessao <= report.periodo_fim
             ).order_by(Evolution.data_sessao.asc()).limit(48).all()
+
+            if not evolucoes:
+                evolucoes = db.query(Evolution).filter(
+                    Evolution.paciente_id == report.paciente_id
+                ).order_by(Evolution.data_sessao.desc()).limit(48).all()
+                evolucoes = list(reversed(evolucoes))
 
             # Enrich with therapist data
             evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \

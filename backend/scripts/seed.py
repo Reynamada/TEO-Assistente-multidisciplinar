@@ -25,6 +25,8 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 def run_seed():
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
     print("🧩 TEO — Iniciando Seed Completo de Dados...")
     
     # Garante que as tabelas estejam criadas no banco de dados
@@ -200,20 +202,27 @@ def run_seed():
             paciente_id=paciente_mateo.id,
             assinado_por=neuropediatra.id,
             periodo_inicio=hoje - timedelta(days=180),
-            periodo_fim=hoje - timedelta(days=155),
+            periodo_fim=hoje,
             sintese_global=(
+                "[SÍNTESE GLOBAL]\n"
                 "Paciente Mateo García, 6 anos, avaliado nesta clínica. Apresenta diagnóstico clínico compatível com "
                 "Transtorno do Espectro Autista (TEA Nível 2). Identificou-se atraso significativo no desenvolvimento "
-                "da linguagem expressiva (ecolalias imediatas) e disfunção de integração sensorial de padrão tátil e vestibular. "
-                "Prescrito acompanhamento contínuo de Terapia Ocupacional com foco em Integração Sensorial (2x/semana) e "
-                "Fonoaudiologia com foco em comunicação alternativa e funcionalidade (2x/semana). Retorno em 5 meses."
+                "da linguagem expressiva (ecolalias imediatas) e disfunção de integração sensorial de padrão tátil e vestibular.\n\n"
+                "[EVOLUÇÃO POR ÁREA]\n"
+                "Em Terapia Ocupacional, o paciente demonstrou excelente ganho de modulação sensorial tátil, tolerando brincadeiras em texturas secas e circuitos corporais por até 15 minutos sem sinais de aversão ou desorganização. "
+                "Em Fonoaudiologia, apresentou melhora expressiva na atenção compartilhada e persistência no uso de comunicação alternativa (PECS Nível 2), buscando a pasta em outros ambientes de forma autônoma.\n\n"
+                "[LAUDO CONCLUSIVO E RECOMENDAÇÕES]\n"
+                "Diante da evolução apresentada e das necessidades terapêuticas contínuas, ratifica-se a indicação de acompanhamento multidisciplinar especializado:\n"
+                "- Terapia Ocupacional com foco em Integração Sensorial: 2x/semana (sugere-se estimulação vestibular e treino de AVDs de alimentação);\n"
+                "- Fonoaudiologia com foco em comunicação alternativa e ampliação de vocabulário funcional: 2x/semana (sugere-se avanço para PECS Nível 3);\n"
+                "Recomenda-se ambiente escolar estruturado com apoio visual e pausas sensoriais. Retorno agendado com a Neuropediatria em 5 meses para reavaliação de laudo."
             ),
-            num_evolucoes_analisadas="0",
-            pdf_path="./reports/laudo_inicial_mateo.pdf",
-            pdf_gerado_em=datetime.now() - timedelta(days=155),
+            num_evolucoes_analisadas="8",
+            pdf_path=None,
+            pdf_gerado_em=None,
             pareceres_json=(
-                '{"Terapia Ocupacional": "Estimular modulação sensorial de estímulos táteis e proprioceptivos.", '
-                '"Fonoaudiologia": "Foco em atenção compartilhada e pareamento visual no PECS."}'
+                '{"Terapia Ocupacional": "Estimular modulação sensorial de estímulos táteis e proprioceptivos. Foco em AVDs de alimentação.", '
+                '"Fonoaudiologia": "Foco em atenção compartilhada e pareamento visual no PECS (transição para Nível 3)."}'
             )
         )
         
@@ -221,19 +230,24 @@ def run_seed():
             paciente_id=paciente_sofia.id,
             assinado_por=neuropediatra.id,
             periodo_inicio=hoje - timedelta(days=60),
-            periodo_fim=hoje - timedelta(days=30),
+            periodo_fim=hoje,
             sintese_global=(
+                "[SÍNTESE GLOBAL]\n"
                 "Paciente Sofia Mendes, 5 anos. Diagnóstico de TEA Nível 1. Apresenta rigidez cognitiva, resistência a "
-                "mudanças de atividades e baixa tolerância à frustração acadêmica. Prescrito acompanhamento em "
-                "Psicologia Analítico-Comportamental (2x/semana) e Psicopedagogia (1x/semana) para estimulação de pré-requisitos "
-                "de aprendizagem escolar e autorregulação emocional."
+                "mudanças de atividades e baixa tolerância à frustração acadêmica.\n\n"
+                "[EVOLUÇÃO POR ÁREA]\n"
+                "Em Psicologia, obteve grande avanço na regulação das emoções básicas e no manejo de frustrações, conseguindo verbalizar 'estou brava' em vez de emitir comportamentos disruptivos durante jogos com turnos. "
+                "Em Psicopedagogia, o tempo de atenção focada em atividades de mesa expandiu para 10 minutos, completando quebra-cabeças e identificando vogais com autonomia.\n\n"
+                "[LAUDO CONCLUSIVO E RECOMENDAÇÕES]\n"
+                "Prescrito acompanhamento contínuo em Psicologia Analítico-Comportamental (2x/semana) com foco em flexibilização cognitiva e autorregulação, "
+                "e Psicopedagogia (1x/semana) para estimulação das funções executivas e pré-requisitos de alfabetização. Orienta-se à escola o uso de rotina visual e antecipação das mudanças de tarefas."
             ),
-            num_evolucoes_analisadas="0",
-            pdf_path="./reports/laudo_inicial_sofia.pdf",
-            pdf_gerado_em=datetime.now() - timedelta(days=30),
+            num_evolucoes_analisadas="8",
+            pdf_path=None,
+            pdf_gerado_em=None,
             pareceres_json=(
-                '{"Psicologia": "Flexibilização de rotina e redução de comportamentos disruptivos baseados em esquiva.", '
-                '"Psicopedagogia": "Estimulação de memória de trabalho e raciocínio lógico-matemático."}'
+                '{"Psicologia": "Flexibilização de rotina e redução de comportamentos disruptivos baseados em esquiva. Estimulação de mando/tacto de emoções.", '
+                '"Psicopedagogia": "Estimulação de memória de trabalho e raciocínio lógico-matemático (atenção sustentada)."}'
             )
         )
         
@@ -241,17 +255,23 @@ def run_seed():
             paciente_id=paciente_lucas.id,
             assinado_por=neuropediatra.id,
             periodo_inicio=hoje - timedelta(days=75),
-            periodo_fim=hoje - timedelta(days=45),
+            periodo_fim=hoje,
             sintese_global=(
+                "[SÍNTESE GLOBAL]\n"
                 "Paciente Lucas Silva, 6 anos. Diagnóstico de TEA Nível 3. Apresenta atraso motor severo com hipotonia "
-                "de tronco e dispraxia orofacial com escape salivar (sialorréia) constante. Recomendado acompanhamento "
-                "de Fisioterapia Motora Global (2x/semana) e Fonoaudiologia com foco em motricidade orofacial e deglutição (2x/semana)."
+                "de tronco e dispraxia orofacial com escape salivar (sialorréia) constante.\n\n"
+                "[EVOLUÇÃO POR ÁREA]\n"
+                "Em Fisioterapia Motora, alcançou excelente ganho de força e equilíbrio dinâmico, sendo capaz de caminhar 20 metros em solo estável sem suporte físico. "
+                "Em Fonoaudiologia, aumentou a tonicidade labial e reduziu significativamente o escape salivar através de exercícios orofaciais e uso de canudos de grosso calibre.\n\n"
+                "[LAUDO CONCLUSIVO E RECOMENDAÇÕES]\n"
+                "Mantém-se indicação de Fisioterapia Motora Global (2x/semana) para fortalecimento de tronco e equilíbrio monopodal, "
+                "e Fonoaudiologia com foco em motricidade orofacial, deglutição e praxias não-verbais (2x/semana). Recomendado uso de copo adaptado e supervisão em deslocamentos no ambiente domiciliar/escolar."
             ),
-            num_evolucoes_analisadas="0",
-            pdf_path="./reports/laudo_inicial_lucas.pdf",
-            pdf_gerado_em=datetime.now() - timedelta(days=45),
+            num_evolucoes_analisadas="8",
+            pdf_path=None,
+            pdf_gerado_em=None,
             pareceres_json=(
-                '{"Fisioterapia": "Treino de equilíbrio estático/dinâmico e fortalecimento de cadeia posterior.", '
+                '{"Fisioterapia": "Treino de equilíbrio estático/dinâmico e fortalecimento de cadeia posterior. Marcha autônoma.", '
                 '"Fonoaudiologia": "Estimulação de tonicidade labial e vedamento orofacial contra escape de saliva."}'
             )
         )
