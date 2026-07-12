@@ -186,7 +186,9 @@ with tab1:
 
                             pdf_ready = bool(rp.get("pdf_path"))
                             status_icon = "✅" if pdf_ready else "⏳"
-                            with st.expander(f"{status_icon} Relatório: {p_ini_fmt} → {p_fim_fmt}", expanded=False):
+                            # Use container instead of expander (nested expanders not allowed in Streamlit)
+                            with st.container():
+                                st.markdown(f"**{status_icon} Relatório: {p_ini_fmt} → {p_fim_fmt}**")
                                 if rp.get("num_evolucoes_analisadas"):
                                     st.caption(f"📊 {rp['num_evolucoes_analisadas']} sessões analisadas")
 
@@ -222,6 +224,7 @@ with tab1:
                                                 st.error(f"⚠️ Erro: {e}")
                                 else:
                                     st.info("⏳ PDF ainda sendo gerado em segundo plano. Atualize a página em instantes.")
+                                st.divider()
 
                 # Permite edição se for admin ou recepcao
                 if get_role() in ["admin", "recepcao"]:
