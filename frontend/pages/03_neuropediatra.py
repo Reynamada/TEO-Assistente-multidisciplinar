@@ -74,6 +74,23 @@ with col_info:
 
     st.caption(f"📱 WhatsApp: {paciente.get('whatsapp_responsavel', '—')}")
 
+    # Exibir especialistas/terapeutas vinculados
+    linked_profs = get_api(f"/patients/{pac_id}/therapists")
+    if linked_profs:
+        from collections import defaultdict
+        t_map = defaultdict(set)
+        for lp in linked_profs:
+            name = lp.get("nome")
+            spec = lp.get("especialidade") or ""
+            role = lp.get("role", "")
+            # Mostra todos os profissionais clínicos (ignora apenas admin/recepcao)
+            if name and role not in {"recepcao", "admin"}:
+                t_map[spec or "Especialidade não informada"].add(name)
+        if t_map:
+            t_str = " | ".join([f"**{k}:** {', '.join(sorted(list(v)))}" for k, v in sorted(t_map.items())])
+            st.markdown(f"🩺 {t_str}")
+
+
 with col_gauge:
     ultimo_laudo = paciente.get("data_ultimo_laudo")
     if ultimo_laudo:
@@ -192,17 +209,24 @@ with tab3:
                             data=st.session_state[key_np],
                             file_name=f"relatorio_{paciente_nome.replace(' ', '_').lower()}_{rel_id[:8]}.pdf",
                             mime="application/pdf",
-                            key=f"dl_{rel_id}"
+                            key=f"dl_{rel_id}",
+                            use_container_width=True,
+                            type="primary"
                         )
+                        import base64
+                        b64_pdf = base64.b64encode(st.session_state[key_np]).decode("utf-8")
+                        pdf_display = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="550px" style="border: 1px solid #ccc; border-radius: 6px; margin-top: 8px;"></iframe>'
+                        st.markdown("**Visualização do Relatório (PDF):**")
+                        st.markdown(pdf_display, unsafe_allow_html=True)
                     else:
-                        if st.button("📄 Gerar / Carregar PDF do Relatório", key=f"btn_np_{rel_id}", use_container_width=True):
+                        if st.button("📄 Carregar & Visualizar PDF do Relatório", key=f"btn_np_{rel_id}", use_container_width=True):
                             with st.spinner("⏳ Gerando relatório em PDF com WeasyPrint (aguarde alguns segundos)..."):
                                 try:
                                     pdf_url = f"{BACKEND_URL}/api/v1/reports/{rel_id}/download"
                                     r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=120)
                                     if r_pdf.status_code == 200:
                                         st.session_state[key_np] = r_pdf.content
-                                        st.success("✅ PDF carregado!")
+                                        st.success("✅ PDF pronto para visualização e download!")
                                         st.rerun()
                                     else:
                                         st.warning("⚠️ Arquivo PDF indisponível no servidor no momento.")

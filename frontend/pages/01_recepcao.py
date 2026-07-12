@@ -119,24 +119,43 @@ with tab1:
                 
                 with col_sessions:
                     st.markdown("##### 🩺 Especialidades & Terapeutas")
-                    # Fetch evolutions for this patient
-                    evols = get_api(f"/evolutions/patient/{p['id']}?limit=10")
-                    if not evols:
-                        st.caption("Nenhuma evolução registrada para este paciente ainda.")
-                    else:
-                        # Extract unique therapists/specialties
-                        therapists = {}
+                    from collections import defaultdict
+                    therapists_map = defaultdict(set)
+
+                    # Roles que NÃO são terapeutas clínicos (apenas administrativos)
+                    _ADMIN_ROLES = {"recepcao", "admin"}
+
+                    # 1. Busca terapeutas vinculados diretamente no backend
+                    linked_profs = get_api(f"/patients/{p['id']}/therapists")
+                    if linked_profs:
+                        for lp in linked_profs:
+                            spec = lp.get("especialidade") or ""
+                            name = lp.get("nome", "")
+                            role = lp.get("role", "")
+                            # Mostra todos os profissionais clínicos (ignora apenas admin/recepcao)
+                            if name and role not in _ADMIN_ROLES:
+                                therapists_map[spec or "Especialidade não informada"].add(name)
+
+                    # 2. Busca histórico de evoluções para pegar especialistas adicionais e datas
+                    evols = get_api(f"/evolutions/patient/{p['id']}?limit=100")
+                    if evols:
                         for ev in evols:
-                            prof = ev.get("profissional", {})
-                            prof_name = prof.get("nome", "Terapeuta")
-                            specialty = ev.get("tipo_sessao", "Terapia")
-                            therapists[specialty] = prof_name
-                        
-                        # Display therapists
-                        for spec, name in therapists.items():
-                            st.write(f"🧬 **{spec}:** {name}")
-                        
-                        # Display recent dates
+                            prof = ev.get("profissional") or {}
+                            name = prof.get("nome", "")
+                            spec = prof.get("especialidade") or ev.get("tipo_sessao") or ""
+                            role = prof.get("role", "")
+                            if name and role not in _ADMIN_ROLES:
+                                therapists_map[spec or "Especialidade não informada"].add(name)
+
+                    # Exibe os terapeutas por especialidade
+                    if not therapists_map:
+                        st.caption("Nenhum terapeuta ou especialidade registrado para este paciente ainda.")
+                    else:
+                        for spec, names in sorted(therapists_map.items()):
+                            st.write(f"🧬 **{spec}:** {', '.join(sorted(list(names)))}")
+
+                    # Exibe datas recentes
+                    if evols:
                         dates = []
                         for ev in evols[:5]:
                             if ev.get("data_sessao"):
@@ -145,7 +164,6 @@ with tab1:
                                     dates.append(d_formatted)
                                 except Exception:
                                     dates.append(ev["data_sessao"])
-                        
                         if dates:
                             st.write(f"📅 **Últimas sessões:** {', '.join(dates)}")
                 
@@ -157,37 +175,53 @@ with tab1:
                         st.caption("Nenhuma guia de relatório gerada ainda.")
                     else:
                         for rp in reps:
-                            if rp.get("pdf_path"):
-                                rp_id = rp["id"]
-                                p_fim = rp.get("periodo_fim", "")
-                                try:
-                                    p_fim_formatted = date.fromisoformat(p_fim).strftime("%d/%m/%Y")
-                                except Exception:
-                                    p_fim_formatted = p_fim
+                            rp_id = rp["id"]
+                            p_ini = rp.get("periodo_inicio", "")
+                            p_fim = rp.get("periodo_fim", "")
+                            try:
+                                p_ini_fmt = date.fromisoformat(p_ini).strftime("%d/%m/%Y")
+                                p_fim_fmt = date.fromisoformat(p_fim).strftime("%d/%m/%Y")
+                            except Exception:
+                                p_ini_fmt, p_fim_fmt = p_ini, p_fim
+
+                            pdf_ready = bool(rp.get("pdf_path"))
+                            status_icon = "✅" if pdf_ready else "⏳"
+                            with st.expander(f"{status_icon} Relatório: {p_ini_fmt} → {p_fim_fmt}", expanded=False):
+                                if rp.get("num_evolucoes_analisadas"):
+                                    st.caption(f"📊 {rp['num_evolucoes_analisadas']} sessões analisadas")
 
                                 key_bytes = f"pdf_bytes_{rp_id}"
                                 if key_bytes in st.session_state:
                                     st.download_button(
-                                        label=f"💾 Baixar Relatório até {p_fim_formatted}",
+                                        label=f"💾 Baixar Relatório (PDF)",
                                         data=st.session_state[key_bytes],
                                         file_name=f"relatorio_{p['nome'].replace(' ', '_').lower()}_{rp_id[:8]}.pdf",
                                         mime="application/pdf",
-                                        key=f"dl_rec_{rp_id}"
+                                        key=f"dl_rec_{rp_id}",
+                                        use_container_width=True,
+                                        type="primary"
                                     )
-                                else:
-                                    if st.button(f"📄 Preparar PDF (Até {p_fim_formatted})", key=f"btn_prep_{rp_id}", use_container_width=True):
-                                        with st.spinner("⏳ Gerando/carregando PDF com WeasyPrint (aguarde uns instantes)..."):
+                                    import base64
+                                    b64_pdf = base64.b64encode(st.session_state[key_bytes]).decode("utf-8")
+                                    pdf_iframe = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="450px" style="border:1px solid #ccc;border-radius:6px;margin-top:8px;"></iframe>'
+                                    st.markdown("**Visualização do Relatório:**")
+                                    st.markdown(pdf_iframe, unsafe_allow_html=True)
+                                elif pdf_ready:
+                                    if st.button(f"📄 Carregar & Visualizar PDF", key=f"btn_prep_{rp_id}", use_container_width=True):
+                                        with st.spinner("⏳ Carregando PDF (aguarde)..."):
                                             try:
                                                 pdf_url = f"{BACKEND_URL}/api/v1/reports/{rp_id}/download"
                                                 r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=120)
                                                 if r_pdf.status_code == 200:
                                                     st.session_state[key_bytes] = r_pdf.content
-                                                    st.success("✅ PDF pronto para download!")
+                                                    st.success("✅ PDF pronto!")
                                                     st.rerun()
                                                 else:
-                                                    st.error(f"❌ PDF indisponível (HTTP {r_pdf.status_code})")
+                                                    st.error(f"❌ Erro HTTP {r_pdf.status_code}: {r_pdf.text[:200]}")
                                             except Exception as e:
-                                                st.error(f"⚠️ Erro ao carregar PDF: {e}")
+                                                st.error(f"⚠️ Erro: {e}")
+                                else:
+                                    st.info("⏳ PDF ainda sendo gerado em segundo plano. Atualize a página em instantes.")
 
                 # Permite edição se for admin ou recepcao
                 if get_role() in ["admin", "recepcao"]:
