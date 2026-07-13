@@ -314,7 +314,9 @@ with tab3:
                                 data=st.session_state[key_bytes_ter],
                                 file_name=f"Laudo_Neuropediatra_{pac_laudo_label.split('—')[0].strip()}_{periodo.replace('/', '-')}.pdf",
                                 mime="application/pdf",
-                                key=f"save_pdf_{rel_id}"
+                                key=f"save_pdf_{rel_id}",
+                                use_container_width=True,
+                                type="primary"
                             )
                         else:
                             if st.button("📥 Obter / Gerar PDF do Laudo", key=f"dl_laudo_{rel_id}", use_container_width=True):
@@ -327,9 +329,16 @@ with tab3:
                                         )
                                         if r_pdf.status_code == 200:
                                             st.session_state[key_bytes_ter] = r_pdf.content
-                                            st.success("✅ Laudo PDF carregado!")
+                                            st.success("✅ Laudo PDF carregado para visualização e download!")
                                             st.rerun()
                                         else:
                                             st.error(f"Erro ao obter PDF: HTTP {r_pdf.status_code}")
                                     except Exception as e_pdf:
                                         st.error(f"⚠️ Erro ao carregar PDF: {e_pdf}")
+
+                    if key_bytes_ter in st.session_state:
+                        import base64
+                        b64_pdf = base64.b64encode(st.session_state[key_bytes_ter]).decode("utf-8")
+                        pdf_display = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="550px" style="border: 1px solid #ccc; border-radius: 6px; margin-top: 12px;"></iframe>'
+                        st.markdown("**Visualização do Laudo (PDF):**")
+                        st.markdown(pdf_display, unsafe_allow_html=True)
