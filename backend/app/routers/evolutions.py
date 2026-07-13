@@ -5,7 +5,7 @@ Módulo 1 do sistema: registro de sessões + tradução LLM + disparo WhatsApp.
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
 from app.database import get_db
@@ -27,7 +27,7 @@ def list_evolutions(
     current_user: Professional = Depends(get_current_user)
 ):
     """Lista evoluções de um paciente (Terapeutas veem apenas suas próprias sessões registradas)."""
-    query = db.query(Evolution).filter(Evolution.paciente_id == patient_id)
+    query = db.query(Evolution).options(joinedload(Evolution.profissional)).filter(Evolution.paciente_id == patient_id)
     if current_user.role == ProfessionalRole.TERAPEUTA:
         query = query.filter(Evolution.profissional_id == current_user.id)
     return query.order_by(Evolution.data_sessao.desc()).limit(limit).all()
@@ -63,6 +63,7 @@ def create_evolution(
     db.add(evolution)
     db.commit()
     db.refresh(evolution)
+    evolution = db.query(Evolution).options(joinedload(Evolution.profissional)).filter(Evolution.id == evolution.id).first()
 
     # Tradução automática em background
     if auto_translate:
