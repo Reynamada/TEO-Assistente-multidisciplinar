@@ -11,6 +11,7 @@ from loguru import logger
 from app.database import get_db
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.patient import Patient
+from app.models.professional import Professional
 from app.services import whatsapp_service, llm_service
 
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
@@ -80,24 +81,18 @@ async def whatsapp_webhook(
     # Atualiza o agendamento com base na intenção
     cita_pendente.resposta_pais = mensagem_recebida
 
+    # Busca nome do neuropediatra para confirmação
+    neuro = db.query(Professional).filter(Professional.id == cita_pendente.neuropediatra_id).first()
+    nome_neuro = f"Dr(a). {neuro.nome.split()[-1]}" if neuro else "Neuropediatra"
+
     if intencao == "aceitar_op1":
         cita_pendente.status = AppointmentStatus.CONFIRMADO_OP1
         cita_pendente.data_confirmada = cita_pendente.data_proposta_1
-        msg_confirmacao = (
-            f"Perfeito, {patient.nome_responsavel}! ✅\n\n"
-            f"Consulta de *{patient.nome.split()[0]}* confirmada para:\n"
-            f"📅 *{opcao_1_fmt}*\n\n"
-            f"Lembrarei você 24h antes. Até lá! 💙"
-        )
+        data_fmt = cita_pendente.data_proposta_1.strftime("%A, %d/%m/%Y às %H:%M")
     elif intencao == "aceitar_op2":
         cita_pendente.status = AppointmentStatus.CONFIRMADO_OP2
         cita_pendente.data_confirmada = cita_pendente.data_proposta_2
-        msg_confirmacao = (
-            f"Perfeito, {patient.nome_responsavel}! ✅\n\n"
-            f"Consulta de *{patient.nome.split()[0]}* confirmada para:\n"
-            f"📅 *{opcao_2_fmt}*\n\n"
-            f"Lembrarei você 24h antes. Até lá! 💙"
-        )
+        data_fmt = cita_pendente.data_proposta_2.strftime("%A, %d/%m/%Y às %H:%M")
     elif intencao == "reagendar":
         cita_pendente.status = AppointmentStatus.REAGENDAMENTO
         msg_confirmacao = (
@@ -116,6 +111,20 @@ async def whatsapp_webhook(
             f"Olá, {patient.nome_responsavel}! 😊\n"
             f"Não entendi bem sua resposta. Você pode responder *1* ou *2* para confirmar o horário, "
             f"ou escrever *outro horário* se precisar de outra data."
+        )
+
+    # Envia confirmação detalhada (apenas para aceitar_op1/op2)
+    if intencao in ["aceitar_op1", "aceitar_op2"]:
+        msg_confirmacao = (
+            f"Olá! ✅ A consulta está confirmada!\n\n"
+            f"👶 *Paciente:* {patient.nome}\n"
+            f"🩺 *Neuropediatra:* {nome_neuro}\n"
+            f"📅 *Data e Horário:* {data_fmt}\n\n"
+            f"💡 *Sugestões importantes para o dia:*\n"
+            f"• Por favor, chegue com **30 minutos de antecedência** para acolhimento na recepção e tranquilidade da criança.\n"
+            f"• Traga os exames anteriores e relatórios da escola (se houver).\n"
+            f"• Em caso de imprevisto, avise-nos por aqui com **24h de antecedência**.\n\n"
+            f"Estamos ansiosos para recebê-los! 💙"
         )
 
     db.commit()
