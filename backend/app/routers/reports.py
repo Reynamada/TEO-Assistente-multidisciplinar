@@ -97,12 +97,14 @@ def generate_report(
     return report
 
 
-def _preparar_dados_evolucoes(evolucoes, db):
+def _preparar_dados_evolucoes(evolucoes, db, patient_id=None):
     """
     Prepara dados enriquecidos das evoluções com info do terapeuta.
     Retorna: (evolucoes_para_pdf, evolucoes_por_area, terapeutas_dict, stats_por_area)
     """
     from collections import defaultdict, OrderedDict
+    from app.models.evolution import Evolution
+    from app.models.appointment import Appointment
 
     evolucoes_para_pdf = []
     evolucoes_por_area = defaultdict(list)
@@ -113,7 +115,7 @@ def _preparar_dados_evolucoes(evolucoes, db):
         # Busca terapeuta
         prof = db.query(Professional).filter(Professional.id == e.profissional_id).first()
         terapeuta_nome = prof.nome if prof else "Terapeuta"
-        terapeuta_especialidade = prof.especialidade.value if prof and prof.especialidade else (e.tipo_sessao or "")
+        terapeuta_especialidade = prof.especialidade.value if prof and prof.especialidade else (e.tipo_sessao or "Terapia")
         terapeuta_registro = prof.registro_conselho or "" if prof else ""
         area = e.tipo_sessao or terapeuta_especialidade or "Sessão"
 
@@ -134,12 +136,25 @@ def _preparar_dados_evolucoes(evolucoes, db):
         if prof and str(prof.id) not in terapeutas_set:
             terapeutas_set[str(prof.id)] = {
                 "nome": prof.nome,
-                "especialidade": prof.especialidade.value if prof.especialidade else "",
+                "especialidade": terapeuta_especialidade,
                 "registro": prof.registro_conselho or "",
                 "num_sessoes": 0,
             }
         if prof:
             terapeutas_set[str(prof.id)]["num_sessoes"] += 1
+
+    if patient_id:
+        evo_profs = db.query(Professional).join(Evolution, Evolution.profissional_id == Professional.id).filter(Evolution.paciente_id == patient_id).all()
+        appt_profs = db.query(Professional).join(Appointment, Appointment.neuropediatra_id == Professional.id).filter(Appointment.paciente_id == patient_id).all()
+        for p in set(evo_profs + appt_profs):
+            if p and str(p.id) not in terapeutas_set:
+                spec = p.especialidade.value if p.especialidade else (p.role.value if p.role else "Terapeuta")
+                terapeutas_set[str(p.id)] = {
+                    "nome": p.nome,
+                    "especialidade": spec,
+                    "registro": p.registro_conselho or "",
+                    "num_sessoes": 0,
+                }
 
     terapeutas_list = list(terapeutas_set.values())
     return evolucoes_para_pdf, dict(evolucoes_por_area), terapeutas_list, dict(stats_por_area)
@@ -174,7 +189,7 @@ def _gerar_relatorio_completo(
 
         # Prepara dados enriquecidos
         evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \
-            _preparar_dados_evolucoes(evolucoes, db)
+            _preparar_dados_evolucoes(evolucoes, db, patient_id=patient_id)
 
         # Prepara resumo das evoluções para o LLM (com nomes de terapeutas)
         evolucoes_resumo = [
@@ -328,7 +343,7 @@ def download_report_pdf(
 
             # Enrich with therapist data
             evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \
-                _preparar_dados_evolucoes(evolucoes, db)
+                _preparar_dados_evolucoes(evolucoes, db, patient_id=report.paciente_id)
 
             pdf_path = pdf_service.gerar_relatorio_semestral(
                 paciente_data=patient_data,

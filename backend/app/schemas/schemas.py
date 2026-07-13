@@ -108,9 +108,20 @@ class EvolutionUpdate(BaseModel):
     notas_tecnicas: Optional[str] = None
     tipo_sessao: Optional[str] = None
 
+class ProfessionalSimpleResponse(BaseModel):
+    id: UUID
+    nome: str
+    especialidade: Optional[ProfessionalEspecialidade] = None
+    role: ProfessionalRole
+    registro_conselho: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
 class EvolutionResponse(EvolutionBase):
     id: UUID
     profissional_id: UUID
+    profissional: Optional[ProfessionalSimpleResponse] = None
     mensagem_pais: Optional[str] = None
     whatsapp_enviado: bool
     whatsapp_enviado_em: Optional[datetime] = None
