@@ -192,17 +192,19 @@ def _gerar_relatorio_completo(
             _preparar_dados_evolucoes(evolucoes, db, patient_id=patient_id)
 
         # Prepara resumo das evoluções para o LLM (com nomes de terapeutas)
-        evolucoes_resumo = [
-            {
+        evolucoes_resumo = []
+        for e in evolucoes:
+            prof_nome = "Terapeuta"
+            if e.profissional_id:
+                prof_obj = db.query(Professional).filter(Professional.id == e.profissional_id).first()
+                if prof_obj:
+                    prof_nome = prof_obj.nome
+            evolucoes_resumo.append({
                 "data": e.data_sessao.strftime("%d/%m/%Y"),
                 "tipo": e.tipo_sessao or "Sessão",
-                "resumo": e.notas_tecnicas[:300],
-                "terapeuta": db.query(Professional).filter(
-                    Professional.id == e.profissional_id
-                ).first().nome if e.profissional_id else "Terapeuta"
-            }
-            for e in evolucoes
-        ]
+                "resumo": (e.notas_tecnicas or "")[:300],
+                "terapeuta": prof_nome,
+            })
 
         # Prepara info de terapeutas para o LLM
         terapeutas_info = [
@@ -267,14 +269,18 @@ def _gerar_relatorio_completo(
         from loguru import logger
         import traceback
         logger.error(f"❌ Erro ao gerar relatório {report_id}: {e}\n{traceback.format_exc()}")
+        # Use a fresh session to ensure [ERRO] is saved even if the main session is broken
+        error_db = SessionLocal()
         try:
-            report = db.query(Report).filter(Report.id == report_id).first()
-            if report:
-                report.sintese_global = f"[ERRO] Falha na geração: {str(e)[:200]}"
-                db.commit()
-                logger.info(f"Marcado relatório {report_id} com erro: {report.sintese_global}")
+            report_err = error_db.query(Report).filter(Report.id == report_id).first()
+            if report_err:
+                report_err.sintese_global = f"[ERRO] Falha na geração: {str(e)[:200]}"
+                error_db.commit()
+                logger.info(f"Marcado relatório {report_id} com erro: {report_err.sintese_global}")
         except Exception as ex:
             logger.error(f"Erro ao marcar relatório {report_id} com erro: {ex}")
+        finally:
+            error_db.close()
     finally:
         db.close()
 
