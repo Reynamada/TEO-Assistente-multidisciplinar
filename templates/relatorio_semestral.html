@@ -467,6 +467,10 @@
     /* Page break helpers */
     .page-break { page-break-before: always; }
     .avoid-break { page-break-inside: avoid; }
+    .avoid-break h1 { page-break-after: avoid; }
+    .area-section { page-break-inside: avoid; }
+    .session-card { page-break-inside: avoid; }
+    .sintese-section, .evolucao-area-section, .laudo-section { page-break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -632,8 +636,8 @@
 
 
   <!-- ═══ 6. REGISTRO DE SESSÕES POR ÁREA ═══ -->
-  <div class="page-break"></div>
-  <h1>📋 Registro Completo de Sessões ({{ num_sessoes }} sessões)</h1>
+  <div class="avoid-break">
+    <h1>📋 Registro Completo de Sessões ({{ num_sessoes }} sessões)</h1>
 
   {% for area, sessoes in evolucoes_por_area.items() %}
   <div class="area-section">
@@ -692,8 +696,8 @@
 
   <!-- ═══ 7. LAUDO CONCLUSIVO E RECOMENDAÇÕES ═══ -->
   {% if laudo_conclusivo %}
-  <div class="page-break"></div>
-  <h1>🏥 Laudo Conclusivo e Recomendações</h1>
+  <div class="avoid-break">
+    <h1>🏥 Laudo Conclusivo e Recomendações</h1>
   <div class="laudo-section">
     <div class="laudo-badge">📋 Laudo Clínico — Recomendações para o Próximo Semestre</div>
     {% for paragrafo in laudo_conclusivo.split('\n\n') %}
