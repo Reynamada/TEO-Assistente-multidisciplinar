@@ -26,10 +26,14 @@ Para detalhes completos veja o [Walkthrough](../walkthrough.md).
 ### Problema
 > Qual problema o agente TEO resolve?
 ```
-A fricção na comunicação entre terapeutas e famílias em clínicas multidisciplinares de neurodesenvolvimento.
-Terapeutas usam jargões clínicos que os pais não compreendem. Laudos vencem sem aviso. Relatórios semestrais
-levam horas para ser compilados manualmente. O resultado: famílias desinformadas, laudos desatualizados
-e médicos perdendo tempo com burocracia ao invés de cuidar.
+A fricção na comunicação entre terapeutas e famílias em clínicas multidisciplinares de neurodesenvolvimento
+Nas clínicas de neurodesenvolvimento, a comunicação entre terapeutas e famílias enfrenta barreiras significativas.
+Uso de jargões clínicos: os profissionais frequentemente utilizam termos técnicos que os pais não compreendem, dificultando o entendimento do tratamento.
+Laudos desatualizados: os relatórios exigidos pelos planos de saúde vencem a cada seis meses, e sem atualização, as crianças ficam impedidas de continuar suas terapias.
+Processo burocrático: a elaboração manual dos relatórios semestrais consome dias de trabalho dos terapeutas.
+Falta de vagas médicas: muitas vezes não há disponibilidade para consultas neurológicas antes do vencimento dos laudos, interrompendo o atendimento.
+Em contraste, clínicas multidisciplinares bem estruturadas — com neuropediatras, terapeutas e uma administração eficiente — conseguem alinhar protocolos e garantir a continuidade do cuidado.
+Consequência atual: famílias permanecem desinformadas, laudos expiram sem renovação e médicos desperdiçam tempo em burocracias, em vez de se dedicarem ao que realmente importa: cuidar dos pacientes.
 ```
 
 ### 💡 Solução: Como o TEO Resolve o Problema?
