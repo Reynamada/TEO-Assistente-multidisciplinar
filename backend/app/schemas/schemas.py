@@ -100,12 +100,14 @@ class EvolutionBase(BaseModel):
     tipo_sessao: Optional[str] = None
     duracao_minutos: Optional[str] = None
     notas_tecnicas: str
+    recomendacoes_terapeuta: Optional[str] = None
 
 class EvolutionCreate(EvolutionBase):
     pass
 
 class EvolutionUpdate(BaseModel):
     notas_tecnicas: Optional[str] = None
+    recomendacoes_terapeuta: Optional[str] = None
     tipo_sessao: Optional[str] = None
 
 class ProfessionalSimpleResponse(BaseModel):
@@ -123,6 +125,7 @@ class EvolutionResponse(EvolutionBase):
     profissional_id: UUID
     profissional: Optional[ProfessionalSimpleResponse] = None
     mensagem_pais: Optional[str] = None
+    recomendacoes_terapeuta: Optional[str] = None
     whatsapp_enviado: bool
     whatsapp_enviado_em: Optional[datetime] = None
     created_at: datetime

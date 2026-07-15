@@ -27,6 +27,9 @@ class Evolution(Base):
     # Notas técnicas (linguagem clínica — preenchidas pelo terapeuta)
     notas_tecnicas = Column(Text, nullable=False)
 
+    # Recomendações e sugestões do terapeuta para o próximo período / casa (estruturado)
+    recomendacoes_terapeuta = Column(Text, nullable=True)
+
     # Mensagem traduzida pelo TEO para os pais (gerada pelo LLM)
     mensagem_pais = Column(Text, nullable=True)
 

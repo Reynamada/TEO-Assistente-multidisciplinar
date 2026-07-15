@@ -18,6 +18,21 @@ Para publicar o TEO no **Streamlit Cloud** (plano gratuito):
 
 ---
 
+## 🔒 Segurança e Ocultação de Chaves/APIs
+
+> [!WARNING]
+> **NUNCA exponha credenciais reais ou chaves de API no repositório Git ou na documentação pública.**
+>
+> Todas as chaves secretas (como `GROQ_API_KEY`, `TWILIO_AUTH_TOKEN`, senhas de banco de dados e chaves SMTP) devem ser tratadas de forma estritamente confidencial e segura.
+>
+> ### 🛡️ Diretrizes de Proteção:
+> 1. **Variáveis de Ambiente (`.env`):** No ambiente local, todas as chaves e segredos devem ser configurados no arquivo `.env`. Este arquivo está adicionado ao `.gitignore` e **nunca** deve ser commitado ou compartilhado no repositório Git.
+> 2. **Provedores Cloud (Streamlit Cloud, Render, etc.):** Utilize a área de configurações de **Secrets** ou **Environment Variables** de cada plataforma para injetar as credenciais dinamicamente em produção/homologação.
+> 3. **Exemplos e Placeholders:** Ao documentar exemplos ou criar templates de configuração (ex: `.env.example`), use placeholders genéricos e fictícios (ex: `SUA_CHAVE_AQUI`).
+> 4. **Tratamento no Código:** O backend (`config.py`) lê os segredos de forma segura via variáveis de ambiente usando `pydantic-settings`.
+
+---
+
 ## 🎯 Visão Geral da Arquitetura
 
 ```
@@ -181,18 +196,18 @@ HTTP 503 com mensagem descritiva ao usuário
 
 ## 📄 CAMADA DE EXPORTAÇÃO
 
-### 7. WeasyPrint + Jinja2
+### 7. WeasyPrint + Playwright + Jinja2
 | | |
 |---|---|
 | **Tipo** | Renderização HTML→PDF + Template Engine |
 | **Custo** | Gratuito (open source) |
-| **Dependências OS** | Pango, Cairo, GTK (instalados no Dockerfile) |
+| **Dependências OS** | Pango, Cairo, GTK (WeasyPrint) / Chromium Headless (Playwright) |
 
-**Por que foi escolhido:**
-- Renderiza o template HTML do relatório com **qualidade profissional A4**
-- Suporte completo a CSS moderno (gradientes, fontes web, layout flexbox)
-- Jinja2 permite variáveis dinâmicas no template (nome do paciente, gráficos de métricas, tabelas)
-- Gerado **em memória** (bytes) — disponibilizado como download sem salvar arquivo no servidor entre requests
+**Por que foram escolhidos:**
+- **Jinja2**: Permite mapear variáveis dinâmicas de forma ágil no template HTML (dados do paciente, pareceres por área, métricas e sessões).
+- **WeasyPrint**: Utilizado primariamente em ambientes Linux/Produção para gerar os PDFs seguindo especificações CSS de mídia impressa.
+- **Playwright (Chromium)**: Utilizado como motor principal em ambiente Windows (onde o WeasyPrint possui dependências complexas de biblioteca Gtk/Pango) e como mecanismo robusto de fallback em produção caso o WeasyPrint encontre algum problema de renderização.
+- **Gerado em memória**: O PDF é disponibilizado diretamente para download ou gravação, otimizando os recursos do servidor.
 
 **Template:** `templates/relatorio_semestral.html`
 
@@ -290,7 +305,8 @@ HTTP 503 com mensagem descritiva ao usuário
 | **WhatsApp Web (wa.me)** | Link Direto | **Gratuito** | — | Envio imediato e gratuito via navegador (sem Twilio) |
 | **Twilio** | WhatsApp API | Pago/Sandbox | SID + Token | Envio em segundo plano automatizado via API |
 | **SMTP Email** | Protocolo de Envio | Gratuito / Hospedado | Usuário + Senha SMTP | Envio automático dos PDFs aos pais e neuropediatras |
-| **WeasyPrint** | PDF Engine | Gratuito | — | Relatório semestral |
+| **WeasyPrint** | PDF Engine | Gratuito | — | Relatório semestral (Linux/Produção) |
+| **Playwright** | PDF Engine / Fallback | Gratuito | — | Motor primário em Windows e Fallback seguro de PDF |
 | **Jinja2** | Template Engine | Gratuito | — | Template HTML do PDF |
 | **APScheduler** | Task Scheduler | Gratuito | — | CRON da regra dos 5 meses |
 | **FastAPI** | Web Framework | Gratuito | — | Backend REST + Webhook |
