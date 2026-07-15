@@ -217,34 +217,39 @@ with tab1:
                                     pdf_iframe = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="450px" style="border:1px solid #ccc;border-radius:6px;margin-top:8px;"></iframe>'
                                     st.markdown("**Visualização do Relatório:**")
                                     st.markdown(pdf_iframe, unsafe_allow_html=True)
-                                elif pdf_ready:
-                                    if st.button(f"📄 Carregar & Visualizar PDF", key=f"btn_prep_{rp_id}", use_container_width=True):
-                                        with st.spinner("⏳ Carregando PDF (aguarde)..."):
+                                else:
+                                    # Sempre mostra botão "Carregar & Visualizar" — o endpoint /download regenera se necessário
+                                    if st.button(f"📄 Carregar & Visualizar PDF", key=f"btn_prep_{rp_id}", use_container_width=True, type="primary"):
+                                        with st.spinner("⏳ Gerando/Carregando PDF (aguarde)..."):
                                             try:
                                                 pdf_url = f"{BACKEND_URL}/api/v1/reports/{rp_id}/download"
-                                                r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=120)
+                                                r_pdf = httpx.get(pdf_url, headers=get_auth_headers(), timeout=180)
                                                 if r_pdf.status_code == 200:
                                                     st.session_state[key_bytes] = r_pdf.content
                                                     st.success("✅ PDF pronto!")
                                                     st.rerun()
                                                 else:
-                                                    st.error(f"❌ Erro HTTP {r_pdf.status_code}: {r_pdf.text[:200]}")
+                                                    st.error(f"❌ Erro HTTP {r_pdf.status_code}: {r_pdf.text[:300]}")
                                             except Exception as e:
-                                                st.error(f"⚠️ Erro: {e}")
-                                elif has_error:
-                                    st.error(f"❌ {sintese[:150]}")
-                                    if st.button(f"🔄 Tentar gerar novamente", key=f"btn_retry_{rp_id}", use_container_width=True, type="primary"):
-                                        with st.spinner("Reenviando para geração..."):
-                                            ok, resp = post_api(f"/reports/{rp_id}/retry", {})
-                                            if ok:
-                                                st.success("✅ Geração reiniciada! Aguarde alguns segundos.")
-                                                st.rerun()
-                                            else:
-                                                st.error(f"❌ {resp.get('detail', 'Erro ao retry')}")
-                                else:
-                                    st.info("⏳ PDF sendo gerado em background...")
-                                    if st.button(f"🔄 Atualizar status", key=f"btn_check_{rp_id}", use_container_width=True):
-                                        st.rerun()
+                                                st.error(f"⚠️ Erro ao gerar/carregar PDF: {e}")
+                                    
+                                    # Mensagem de status abaixo do botão
+                                    if has_error:
+                                        st.error(f"❌ {sintese[:200]}")
+                                        if st.button(f"🔄 Tentar gerar novamente", key=f"btn_retry_{rp_id}", use_container_width=True):
+                                            with st.spinner("Reenviando para geração..."):
+                                                ok, resp = post_api(f"/reports/{rp_id}/retry", {})
+                                                if ok:
+                                                    st.success("✅ Geração reiniciada! Aguarde alguns segundos.")
+                                                    st.rerun()
+                                                else:
+                                                    st.error(f"❌ {resp.get('detail', 'Erro ao retry')}")
+                                    elif not pdf_ready:
+                                        st.info("⏳ PDF sendo gerado em background... Clique acima para forçar geração imediata.")
+                                        if st.button(f"🔄 Atualizar status", key=f"btn_check_{rp_id}", use_container_width=True):
+                                            st.rerun()
+                                    else:
+                                        st.caption("✅ PDF disponível — clique acima para visualizar")
                                 st.divider()
 
                 # Permite edição se for admin ou recepcao

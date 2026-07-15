@@ -404,11 +404,42 @@ def download_report_pdf(
             evolucoes_para_pdf, evolucoes_por_area, terapeutas_list, stats_por_area = \
                 _preparar_dados_evolucoes(evolucoes, db, patient_id=report.paciente_id)
 
+            # Regenerate LLM synthesis if missing or errored
+            sintese_global = report.sintese_global
+            if not sintese_global or sintese_global.startswith("[ERRO]"):
+                logger.info(f"Regenerando síntese LLM para relatório {report_id}...")
+                # Prepare evolucoes_resumo for LLM
+                evolucoes_resumo = [
+                    {
+                        "data": e.data_sessao.strftime("%d/%m/%Y"),
+                        "tipo": e.tipo_sessao or "Sessão",
+                        "resumo": (e.notas_tecnicas or "")[:300],
+                        "terapeuta": db.query(Professional).filter(Professional.id == e.profissional_id).first().nome if e.profissional_id else "Terapeuta"
+                    }
+                    for e in evolucoes
+                ]
+                terapeutas_info = [
+                    f"{t['nome']} ({t['especialidade']}, {t['num_sessoes']} sessões)"
+                    for t in terapeutas_list
+                ]
+                sintese_global = llm_service.sintetizar_relatorio(
+                    nome_paciente=patient.nome,
+                    idade=patient.idade,
+                    periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
+                    periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
+                    evolucoes_resumo=evolucoes_resumo,
+                    pareceres=pareceres_dict,
+                    terapeutas_info=terapeutas_info,
+                    areas_atendimento=list(stats_por_area.keys()),
+                )
+                report.sintese_global = sintese_global
+                db.commit()
+
             pdf_path = pdf_service.gerar_relatorio_semestral(
                 paciente_data=patient_data,
                 profissional_data=profissional_data,
                 evolucoes=evolucoes_para_pdf,
-                sintese_global=report.sintese_global or "Síntese global não disponível.",
+                sintese_global=sintese_global,
                 pareceres=pareceres_dict,
                 periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
                 periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
