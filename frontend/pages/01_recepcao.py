@@ -185,8 +185,17 @@ with tab1:
                                 p_ini_fmt, p_fim_fmt = p_ini, p_fim
 
                             pdf_ready = bool(rp.get("pdf_path"))
-                            status_icon = "✅" if pdf_ready else "⏳"
-                            # Use container instead of expander (nested expanders not allowed in Streamlit)
+                            sintese = rp.get("sintese_global") or ""
+                            has_error = sintese.startswith("[ERRO]")
+                            is_processing = not pdf_ready and not has_error
+
+                            if has_error:
+                                status_icon = "❌"
+                            elif pdf_ready:
+                                status_icon = "✅"
+                            else:
+                                status_icon = "⏳"
+
                             with st.container():
                                 st.markdown(f"**{status_icon} Relatório: {p_ini_fmt} → {p_fim_fmt}**")
                                 if rp.get("num_evolucoes_analisadas"):
@@ -222,8 +231,12 @@ with tab1:
                                                     st.error(f"❌ Erro HTTP {r_pdf.status_code}: {r_pdf.text[:200]}")
                                             except Exception as e:
                                                 st.error(f"⚠️ Erro: {e}")
+                                elif has_error:
+                                    st.error("❌ Erro na geração do PDF. Tente gerar novamente.")
                                 else:
-                                    st.info("⏳ PDF ainda sendo gerado em segundo plano. Atualize a página em instantes.")
+                                    st.info("⏳ PDF sendo gerado...")
+                                    if st.button(f"🔄 Verificar status", key=f"btn_check_{rp_id}", use_container_width=True):
+                                        st.rerun()
                                 st.divider()
 
                 # Permite edição se for admin ou recepcao

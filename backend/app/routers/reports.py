@@ -267,14 +267,14 @@ def _gerar_relatorio_completo(
         from loguru import logger
         import traceback
         logger.error(f"❌ Erro ao gerar relatório {report_id}: {e}\n{traceback.format_exc()}")
-        # Mark report with error so the download endpoint can give a meaningful message
         try:
             report = db.query(Report).filter(Report.id == report_id).first()
             if report:
-                report.sintese_global = report.sintese_global or f"[ERRO] Falha na geração: {str(e)[:200]}"
-            db.commit()
-        except Exception:
-            pass
+                report.sintese_global = f"[ERRO] Falha na geração: {str(e)[:200]}"
+                db.commit()
+                logger.info(f"Marcado relatório {report_id} com erro: {report.sintese_global}")
+        except Exception as ex:
+            logger.error(f"Erro ao marcar relatório {report_id} com erro: {ex}")
     finally:
         db.close()
 
