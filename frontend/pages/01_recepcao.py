@@ -232,10 +232,18 @@ with tab1:
                                             except Exception as e:
                                                 st.error(f"⚠️ Erro: {e}")
                                 elif has_error:
-                                    st.error("❌ Erro na geração do PDF. Tente gerar novamente.")
+                                    st.error(f"❌ {sintese[:150]}")
+                                    if st.button(f"🔄 Tentar gerar novamente", key=f"btn_retry_{rp_id}", use_container_width=True, type="primary"):
+                                        with st.spinner("Reenviando para geração..."):
+                                            ok, resp = post_api(f"/reports/{rp_id}/retry", {})
+                                            if ok:
+                                                st.success("✅ Geração reiniciada! Aguarde alguns segundos.")
+                                                st.rerun()
+                                            else:
+                                                st.error(f"❌ {resp.get('detail', 'Erro ao retry')}")
                                 else:
-                                    st.info("⏳ PDF sendo gerado...")
-                                    if st.button(f"🔄 Verificar status", key=f"btn_check_{rp_id}", use_container_width=True):
+                                    st.info("⏳ PDF sendo gerado em background...")
+                                    if st.button(f"🔄 Atualizar status", key=f"btn_check_{rp_id}", use_container_width=True):
                                         st.rerun()
                                 st.divider()
 

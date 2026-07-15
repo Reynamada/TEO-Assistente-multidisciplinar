@@ -285,6 +285,59 @@ def _gerar_relatorio_completo(
         db.close()
 
 
+@router.post("/{report_id}/retry", response_model=ReportResponse)
+def retry_report_pdf(
+    report_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: Professional = Depends(require_role(
+        ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN
+    ))
+):
+    """Regenera o PDF de um relatório que falhou ou ainda não foi gerado."""
+    from loguru import logger
+
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Relatório não encontrado")
+
+    # Busca evoluções do período
+    evolucoes = db.query(Evolution).filter(
+        Evolution.paciente_id == report.paciente_id,
+        Evolution.data_sessao >= report.periodo_inicio,
+        Evolution.data_sessao <= report.periodo_fim
+    ).order_by(Evolution.data_sessao.asc()).limit(48).all()
+
+    if not evolucoes:
+        evolucoes = db.query(Evolution).filter(
+            Evolution.paciente_id == report.paciente_id
+        ).order_by(Evolution.data_sessao.desc()).limit(48).all()
+        evolucoes = list(reversed(evolucoes))
+
+    if not evolucoes:
+        raise HTTPException(status_code=400, detail="Nenhuma evolução encontrada para regenerar o PDF")
+
+    # Limpa erro anterior
+    report.sintese_global = None
+    report.pdf_path = None
+    report.pdf_gerado_em = None
+    db.commit()
+
+    # Dispara regeneração em background
+    background_tasks.add_task(
+        _gerar_relatorio_completo,
+        report_id=report.id,
+        patient_id=report.paciente_id,
+        evolucoes_ids=[e.id for e in evolucoes],
+        assinado_por_id=current_user.id,
+        periodo_inicio=report.periodo_inicio.strftime("%d/%m/%Y"),
+        periodo_fim=report.periodo_fim.strftime("%d/%m/%Y"),
+    )
+
+    logger.info(f"🔄 Retry disparado para relatório {report_id}")
+    return report
+
+
 @router.get("/{report_id}/download")
 def download_report_pdf(
     report_id: UUID,

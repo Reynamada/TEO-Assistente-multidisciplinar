@@ -100,48 +100,45 @@ def gerar_relatorio_semestral(
 
         html_content = template.render(**context)
 
-        # Try generating using WeasyPrint
-        try:
-            logger.info("Attempting PDF generation using WeasyPrint...")
-            from weasyprint import HTML
-            HTML(string=html_content).write_pdf(target=str(pdf_path))
-            logger.info(f"Successfully generated PDF using WeasyPrint at {pdf_path}")
-            return str(pdf_path)
-        except Exception as wp_error:
-            logger.warning(
-                f"WeasyPrint generation failed or not configured (GTK error?): {wp_error}. "
-                "Falling back to Playwright..."
-            )
-            
-            # Fallback to Playwright
+        import sys
+
+        # On Windows, skip WeasyPrint entirely (requires GTK/Pango C libs not available)
+        if sys.platform == "win32":
+            logger.info("Windows detected — skipping WeasyPrint, using Playwright directly")
+        else:
+            # Try WeasyPrint on Linux/macOS where GTK libs are usually available
             try:
-                from playwright.sync_api import sync_playwright
-                with sync_playwright() as p:
-                    # Launch chromium in headless mode
-                    browser = p.chromium.launch(headless=True)
-                    page = browser.new_page()
-                    page.set_content(html_content)
-                    page.emulate_media(media="print")
-                    # Wait for network idle/fonts to load (10s timeout max)
-                    try:
-                        page.wait_for_load_state("networkidle", timeout=10000)
-                    except Exception:
-                        pass  # Continue even if timeout; fonts may be unavailable in server
-                    page.pdf(
-                        path=str(pdf_path),
-                        format="A4",
-                        print_background=True,
-                        margin={"top": "0mm", "bottom": "0mm", "left": "0mm", "right": "0mm"}
-                    )
-                    browser.close()
-                logger.info(f"Successfully generated PDF using Playwright fallback at {pdf_path}")
+                logger.info("Attempting PDF generation using WeasyPrint...")
+                from weasyprint import HTML
+                HTML(string=html_content).write_pdf(target=str(pdf_path))
+                logger.info(f"Successfully generated PDF using WeasyPrint at {pdf_path}")
                 return str(pdf_path)
-            except Exception as pw_error:
-                logger.error(f"Playwright PDF generation failed: {pw_error}")
-                # Re-raise the original WeasyPrint error or a custom error combining both
-                raise RuntimeError(
-                    f"Failed to generate PDF. WeasyPrint error: {wp_error}. Playwright error: {pw_error}"
+            except Exception as wp_error:
+                logger.warning(
+                    f"WeasyPrint generation failed or not configured (GTK error?): {wp_error}. "
+                    "Falling back to Playwright..."
                 )
+
+        # Generate PDF using Playwright
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.set_content(html_content, wait_until="networkidle")
+            page.emulate_media(media="print")
+            try:
+                page.wait_for_load_state("networkidle", timeout=15000)
+            except Exception:
+                pass
+            page.pdf(
+                path=str(pdf_path),
+                format="A4",
+                print_background=True,
+                margin={"top": "0mm", "bottom": "0mm", "left": "0mm", "right": "0mm"}
+            )
+            browser.close()
+        logger.info(f"Successfully generated PDF using Playwright at {pdf_path}")
+        return str(pdf_path)
     except Exception as e:
         logger.error(f"Erro ao gerar PDF: {e}")
         raise
