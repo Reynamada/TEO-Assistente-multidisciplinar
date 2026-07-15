@@ -15,7 +15,7 @@ Para publicar o TEO no **Streamlit Cloud** (plano gratuito):
 
 > **Dica:** O plano gratuito permite até 3 apps simultâneos e até 1 GB de armazenamento – suficiente para o TEO em ambiente de demonstração.
 
-## Roteiro Sugerido
+
 
 ### 1. O Problema
 > Qual dor do cliente o TEO resolve?
@@ -36,25 +36,8 @@ O TEO é a ponte inteligente entre a clínica e as famílias. Ele age em três f
 
 **Módulo 3 — Relatório Semestral:** Com 1 clique, o neuropediatra recebe um PDF profissional com a síntese das últimas 48 sessões, gerada pela IA com base nas notas dos terapeutas, pronto para assinar e entregar.
 
-### 3. Demonstração
-> Mostre o agente funcionando (pode ser gravação de tela)
 
-```
-• Dashboard de Login: Mostre os 3 perfis de acesso (Recepção, Terapeuta, Neuropediatra).
-
-• Módulo 1 (Terapeuta): Abra a aba "Nova Evolução". Digite notas técnicas de TO.
-  Clique "Prévia da Mensagem" — mostre a tradução em tempo real pelo TEO.
-  Clique "Salvar e Enviar WhatsApp" — mensagem enviada para os pais.
-
-• Módulo 2 (Recepção): Vá em "Laudos Vencendo" — lista de pacientes com laudo crítico.
-  Clique "Disparar CRON Manualmente" — mostre as mensagens sendo enviadas.
-
-• Módulo 3 (Neuropediatra): Selecione um paciente. Veja os gráficos de progresso (Plotly).
-  Preencha os pareceres por área. Clique "Gerar Relatório Semestral".
-  Aguarde o processamento e faça o download do PDF profissional.
-```
-
-### 4. Diferencial e Impacto
+### 3. Diferencial e Impacto
 > Por que essa solução é inovadora e qual é o impacto dela na sociedade?
 
 ```
@@ -74,21 +57,4 @@ década, ferramentas que aumentam a capacidade das clínicas sem aumentar sua eq
 são essenciais para democratizar o acesso ao cuidado especializado."
 ```
 
----
 
-## Checklist do Pitch
-
-- [ ] Duração máxima de 3 minutos
-- [x] Problema claramente definido
-- [x] Solução demonstrada na prática (3 módulos)
-- [x] Diferencial explicado
-- [ ] Áudio e vídeo com boa qualidade
-- [ ] Link do vídeo adicionado
-
----
-
-## Link do Vídeo
-
-> Cole aqui o link do pitch (YouTube, Loom, Google Drive, etc.)
-
-[Em produção — adicionar após gravação]
