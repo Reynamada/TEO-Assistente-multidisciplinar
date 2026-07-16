@@ -139,3 +139,51 @@ def enviar_resultado_evolucao(
     Módulo 1: Envia a mensagem de evolução traduzida pelo TEO para os pais.
     """
     return enviar_mensagem(para_numero, mensagem_traduzida)
+
+
+def enviar_laudo_pronto(
+    para_numero: str,
+    nome_responsavel: str,
+    nome_paciente: str,
+    periodo_inicio: str,
+    periodo_fim: str,
+    nome_neuropediatra: str
+) -> Optional[str]:
+    """
+    Notifica os responsáveis que o laudo semestral foi gerado e está disponível.
+    """
+    mensagem = (
+        f"Olá, {nome_responsavel}! 😊\n\n"
+        f"O laudo semestral de *{nome_paciente}* referente ao período "
+        f"{periodo_inicio} a {periodo_fim} foi finalizado pela {nome_neuropediatra}. 📋\n\n"
+        f"O documento está disponível no sistema para consulta. "
+        f"Se preferir, podemos enviar o PDF por aqui — é só responder *sim*.\n\n"
+        f"Continuamos acompanhando de perto o desenvolvimento do {nome_paciente}! 💙"
+    )
+    return enviar_mensagem(para_numero, mensagem)
+
+
+def enviar_indicacoes_terapeuticas(
+    para_numero: str,
+    nome_responsavel: str,
+    nome_paciente: str,
+    terapeutas_nomes: list[str],
+    diagnostico: str,
+    recomendacoes: str,
+    nome_neuropediatra: str
+) -> Optional[str]:
+    """
+    Notifica os responsáveis sobre as indicações terapêuticas do neuropediatra.
+    """
+    terapeutas_lista = "\n".join([f"• {nome}" for nome in terapeutas_nomes]) if terapeutas_nomes else "—"
+    
+    mensagem = (
+        f"Olá, {nome_responsavel}! 😊\n\n"
+        f"A {nome_neuropediatra} finalizou a consulta de *{nome_paciente}* e definiu o plano terapêutico:\n\n"
+        f"🩺 *Diagnóstico:* {diagnostico or 'Não informado'}\n\n"
+        f"👥 *Equipe terapêutica recomendada:*\n{terapeutas_lista}\n\n"
+        f"💡 *Recomendações para o próximo período:*\n{recomendacoes or '—'}\n\n"
+        f"Os horários iniciais serão definidos em breve e a Recepção entrará em contato para agendamento. "
+        f"Qualquer dúvida, é só escrever aqui! 💙"
+    )
+    return enviar_mensagem(para_numero, mensagem)

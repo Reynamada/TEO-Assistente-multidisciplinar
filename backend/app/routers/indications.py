@@ -4,7 +4,7 @@ Formulário do Neuropediatra para indicar terapeutas + diagnóstico/evolução/r
 """
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,8 +12,45 @@ from app.models.patient import Patient
 from app.models.professional import Professional, ProfessionalRole
 from app.schemas.schemas import IndicationCreate, IndicationUpdate, IndicationResponse
 from app.services.auth_service import get_current_user, require_role
+from app.services import whatsapp_service
+from loguru import logger
 
 router = APIRouter(prefix="/indications", tags=["Indicações Terapêuticas"])
+
+
+def _enviar_indicacoes_whatsapp_background(patient_id: UUID):
+    """Background task: envia indicações terapêuticas por WhatsApp ao responsável."""
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        patient = db.query(Patient).filter(Patient.id == patient_id).first()
+        if not patient or not patient.whatsapp_responsavel:
+            logger.warning(f"Paciente ou WhatsApp não encontrado para indicações {patient_id}")
+            return
+
+        # Tenta pegar o último neuropediatra que atualizou (pode ser nulo)
+        profissional = db.query(Professional).filter(
+            Professional.role == ProfessionalRole.NEUROPEDIATRA
+        ).first()
+        profissional_nome = profissional.nome if profissional else "Neuropediatra"
+
+        terapeutas_nomes = [t.nome for t in patient.terapeutas_sugeridos] if patient.terapeutas_sugeridos else []
+
+        whatsapp_service.enviar_indicacoes_terapeuticas(
+            para_numero=patient.whatsapp_responsavel,
+            nome_responsavel=patient.nome_responsavel,
+            nome_paciente=patient.nome,
+            terapeutas_nomes=terapeutas_nomes,
+            diagnostico=patient.diagnostico_consulta or patient.diagnostico_principal,
+            recomendacoes=patient.recomendacoes_consulta or "",
+            nome_neuropediatra=profissional_nome
+        )
+        logger.info(f"✅ Indicações {patient_id} enviadas por WhatsApp para {patient.whatsapp_responsavel}")
+
+    except Exception as e:
+        logger.error(f"Erro ao enviar WhatsApp das indicações {patient_id}: {e}")
+    finally:
+        db.close()
 
 
 @router.get("/patient/{patient_id}", response_model=IndicationResponse)
@@ -48,6 +85,7 @@ def get_indication(
 def create_indication(
     patient_id: UUID,
     payload: IndicationCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Professional = Depends(require_role(ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN))
 ):
@@ -79,6 +117,9 @@ def create_indication(
     db.commit()
     db.refresh(patient)
 
+    # Envia WhatsApp para o responsável (background)
+    background_tasks.add_task(_enviar_indicacoes_whatsapp_background, patient_id, current_user.id)
+
     return IndicationResponse(
         terapeutas_ids=[str(t.id) for t in terapeutas],
         diagnostico=patient.diagnostico_consulta,
@@ -92,6 +133,7 @@ def create_indication(
 def update_indication(
     patient_id: UUID,
     payload: IndicationUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Professional = Depends(require_role(ProfessionalRole.NEUROPEDIATRA, ProfessionalRole.ADMIN))
 ):
@@ -118,6 +160,9 @@ def update_indication(
 
     db.commit()
     db.refresh(patient)
+
+    # Envia WhatsApp para o responsável (background)
+    background_tasks.add_task(_enviar_indicacoes_whatsapp_background, patient_id)
 
     return IndicationResponse(
         terapeutas_ids=[str(t.id) for t in patient.terapeutas_sugeridos] if patient.terapeutas_sugeridos else [],

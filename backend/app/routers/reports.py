@@ -498,19 +498,13 @@ def _enviar_laudo_whatsapp_background(report_id: UUID):
         profissional = db.query(Professional).filter(Professional.id == report.assinado_por).first()
         profissional_nome = profissional.nome if profissional else "Neuropediatra"
 
-        mensagem = (
-            f"📋 *Laudo Semestral Disponível*\n\n"
-            f"Olá! O laudo semestral de *{patient.nome}* foi gerado pelo Dr(a). {profissional_nome}.\n\n"
-            f"📅 Período: {report.periodo_inicio.strftime('%d/%m/%Y')} a {report.periodo_fim.strftime('%d/%m/%Y')}\n"
-            f"🧠 Diagnóstico: {patient.diagnostico_principal}\n\n"
-            f"O documento completo está disponível no sistema TEO.\n"
-            f"Em caso de dúvidas, entre em contato com a recepção.\n\n"
-            f"Equipe TEO 🧩"
-        )
-
-        whatsapp_service.enviar_mensagem_whatsapp(
+        whatsapp_service.enviar_laudo_pronto(
             para_numero=patient.whatsapp_responsavel,
-            mensagem=mensagem
+            nome_responsavel=patient.nome_responsavel,
+            nome_paciente=patient.nome,
+            periodo_inicio=report.periodo_inicio.strftime('%d/%m/%Y'),
+            periodo_fim=report.periodo_fim.strftime('%d/%m/%Y'),
+            nome_neuropediatra=profissional_nome
         )
         logger.info(f"✅ Laudo {report_id} enviado por WhatsApp para {patient.whatsapp_responsavel}")
 
