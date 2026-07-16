@@ -360,6 +360,25 @@
       margin-bottom: 2px;
     }
 
+    .session-rec-terapeuta {
+      background: #F0F9FF;
+      border: 1px solid #BAE6FD;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 8.5pt;
+      line-height: 1.5;
+      color: #0369A1;
+      margin-top: 6px;
+    }
+
+    .session-rec-terapeuta-label {
+      font-weight: 600;
+      font-size: 7.5pt;
+      color: #0284C7;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
     /* ── EVOLUÇÃO POR ÁREA (TEXTO LLM) ─────── */
     .evolucao-area-section {
       background: var(--bg-section);
@@ -658,6 +677,13 @@
       <div class="session-notas-label">📝 Notas Técnicas</div>
       <div class="session-notas">{{ ev.notas }}</div>
 
+      {% if ev.recomendacoes_terapeuta %}
+      <div class="session-rec-terapeuta">
+        <div class="session-rec-terapeuta-label">💡 Recomendações do Terapeuta</div>
+        {{ ev.recomendacoes_terapeuta }}
+      </div>
+      {% endif %}
+
       {% if ev.mensagem_pais %}
       <div class="session-msg-pais">
         <div class="session-msg-pais-label">💬 Evolução enviada aos pais (WhatsApp)</div>
@@ -675,9 +701,10 @@
     <thead>
       <tr>
         <th style="width:10%">Data</th>
-        <th style="width:15%">Tipo</th>
-        <th style="width:18%">Terapeuta</th>
-        <th style="width:57%">Notas Clínicas</th>
+        <th style="width:12%">Tipo</th>
+        <th style="width:15%">Terapeuta</th>
+        <th style="width:38%">Notas Clínicas</th>
+        <th style="width:25%">Recomendações</th>
       </tr>
     </thead>
     <tbody>
@@ -687,6 +714,7 @@
         <td><span class="badge-area">{{ ev.tipo or '—' }}</span></td>
         <td>{{ ev.terapeuta_nome or '—' }}</td>
         <td>{{ ev.notas }}</td>
+        <td>{{ ev.recomendacoes_terapeuta or '—' }}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -210,7 +210,7 @@ def sintetizar_relatorio(
         idade: Idade do paciente
         periodo_inicio: Data de início do período (string formatada)
         periodo_fim: Data de fim do período (string formatada)
-        evolucoes_resumo: Lista de dicts com resumo de cada evolução
+        evolucoes_resumo: Lista de dicts com resumo de cada evolução (inclui recomendacoes)
         pareceres: Dict com pareceres por área terapêutica
         terapeutas_info: Lista de strings com info dos terapeutas
         areas_atendimento: Lista de áreas terapêuticas envolvidas
@@ -221,6 +221,7 @@ def sintetizar_relatorio(
     num_evolucoes = len(evolucoes_resumo)
     evolucoes_texto = "\n".join([
         f"- {e.get('data', '')}: [{e.get('tipo', '')}] ({e.get('terapeuta', 'Terapeuta')}) {e.get('resumo', '')}"
+        + (f"\n    💡 Recomendações: {e.get('recomendacoes', '')}" if e.get('recomendacoes') else "")
         for e in evolucoes_resumo[:48]  # máximo 48 sessões
     ])
 

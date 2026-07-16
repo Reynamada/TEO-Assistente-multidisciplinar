@@ -123,6 +123,7 @@ def _preparar_dados_evolucoes(evolucoes, db, patient_id=None):
             "data": e.data_sessao.strftime("%d/%m/%Y"),
             "tipo": area,
             "notas": e.notas_tecnicas,
+            "recomendacoes_terapeuta": e.recomendacoes_terapeuta or "",
             "mensagem_pais": e.mensagem_pais or "",
             "terapeuta_nome": terapeuta_nome,
             "terapeuta_especialidade": terapeuta_especialidade,
@@ -204,6 +205,7 @@ def _gerar_relatorio_completo(
                 "tipo": e.tipo_sessao or "Sessão",
                 "resumo": (e.notas_tecnicas or "")[:300],
                 "terapeuta": prof_nome,
+                "recomendacoes": e.recomendacoes_terapeuta or "",
             })
 
         # Prepara info de terapeutas para o LLM
@@ -414,7 +416,8 @@ def download_report_pdf(
                         "data": e.data_sessao.strftime("%d/%m/%Y"),
                         "tipo": e.tipo_sessao or "Sessão",
                         "resumo": (e.notas_tecnicas or "")[:300],
-                        "terapeuta": db.query(Professional).filter(Professional.id == e.profissional_id).first().nome if e.profissional_id else "Terapeuta"
+                        "terapeuta": db.query(Professional).filter(Professional.id == e.profissional_id).first().nome if e.profissional_id else "Terapeuta",
+                        "recomendacoes": e.recomendacoes_terapeuta or "",
                     }
                     for e in evolucoes
                 ]
