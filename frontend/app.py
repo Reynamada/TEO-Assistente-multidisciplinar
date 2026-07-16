@@ -269,6 +269,8 @@ def main():
         exec(open(os.path.join(os.path.dirname(__file__), "pages", "03_neuropediatra.py"), encoding="utf-8").read(), globals())
     elif current_page == "agendamentos":
         exec(open(os.path.join(os.path.dirname(__file__), "pages", "04_agendamentos.py"), encoding="utf-8").read(), globals())
+    elif current_page == "admin":
+        exec(open(os.path.join(os.path.dirname(__file__), "pages", "05_admin.py"), encoding="utf-8").read(), globals())
     else:
         page_dashboard()
 

@@ -32,6 +32,20 @@ def get_api(endpoint: str):
         return []
 
 
+def post_api(endpoint: str, data: dict) -> tuple[bool, dict]:
+    try:
+        import httpx
+        r = httpx.post(f"{BACKEND_URL}/api/v1{endpoint}", json=data, headers=get_auth_headers(), timeout=30)
+        if r.status_code in [200, 201]:
+            return True, r.json()
+        else:
+            st.error(f"❌ Erro na API POST {endpoint} (HTTP {r.status_code}): {r.text}")
+            return False, {"detail": r.text}
+    except Exception as e:
+        st.error(f"⚠️ Erro ao conectar com API POST {endpoint}: {e}")
+        return False, {"detail": str(e)}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.markdown("## 👨‍⚕️ Painel do Neuropediatra")
@@ -105,7 +119,7 @@ with col_gauge:
 st.divider()
 
 # ── Tabs ──────────────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["📊 Progresso e Gráficos", "📝 Pareceres", "📄 Relatório Semestral"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Progresso e Gráficos", "📝 Pareceres", "🏥 Indicações Terapêuticas", "📄 Relatório Semestral"])
 
 # ── Tab 1: Progresso ──────────────────────────────────────
 with tab1:
@@ -280,3 +294,220 @@ with tab3:
                     st.error(f"Erro {r.status_code}: {r.text}")
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
+
+
+# ── Tab 4: Indicações Terapêuticas ───────────────────────────
+with tab4:
+    st.subheader("🏥 Indicações Terapêuticas e Laudo da Consulta")
+    st.caption("Preencha as indicações de terapeutas, diagnóstico, evolução observada e recomendações para o próximo período. Ao salvar, o responsável é notificado por WhatsApp.")
+
+    # Busca terapeutas disponíveis
+    terapeutas = get_api("/professionals/terapeutas")
+    terapeutas_map = {f"{t['nome']} — {t['especialidade']}": t['id'] for t in terapeutas} if terapeutas else {}
+
+    if not terapeutas_map:
+        st.warning("⚠️ Nenhum terapeuta cadastrado no sistema. Cadastre terapeutas antes de indicar.")
+    else:
+        # Indicações atuais
+        indicacoes_atual = get_api(f"/indications/patient/{pac_id}")
+        
+        st.markdown("### 📋 Indicações Atuais")
+        if indicacoes_atual.get("terapeutas_ids"):
+            terapeutas_atual = get_api("/professionals/terapeutas")
+            nomes_atuais = []
+            for tid in indicacoes_atual["terapeutas_ids"]:
+                for t in terapeutas_atual:
+                    if t['id'] == tid:
+                        nomes_atuais.append(f"• {t['nome']} ({t['especialidade']})")
+                        break
+            st.markdown("**Terapeutas indicados:**\n" + "\n".join(nomes_atuais))
+        else:
+            st.info("Nenhum terapeuta indicado ainda.")
+
+        if indicacoes_atual.get("diagnostico"):
+            st.markdown(f"**Diagnóstico:** {indicacoes_atual['diagnostico']}")
+        if indicacoes_atual.get("evolucao"):
+            st.markdown(f"**Evolução observada:** {indicacoes_atual['evolucao']}")
+        if indicacoes_atual.get("recomendacoes"):
+            st.markdown(f"**Recomendações:** {indicacoes_atual['recomendacoes']}")
+
+        st.divider()
+        st.markdown("### ✏️ Atualizar Indicações")
+
+        # Seleção de terapeutas
+        terapeutas_selecionados = st.multiselect(
+            "👥 Terapeutas a indicar *",
+            options=list(terapeutas_map.keys()),
+            default=[k for k, v in terapeutas_map.items() if v in indicacoes_atual.get("terapeutas_ids", [])],
+            placeholder="Selecione um ou mais terapeutas"
+        )
+
+        # Diagnóstico
+        diagnostico = st.text_area(
+            "🩺 Diagnóstico da consulta *",
+            value=indicacoes_atual.get("diagnostico", ""),
+            height=100,
+            placeholder="Ex: TEA (nível 1) — melhora na interação social, mantém estereotipias motoras..."
+        )
+
+        # Evolução observada
+        evolucao = st.text_area(
+            "📈 Evolução observada na consulta",
+            value=indicacoes_atual.get("evolucao", ""),
+            height=100,
+            placeholder="Descreva a evolução do paciente desde a última consulta..."
+        )
+
+        # Recomendações
+        recomendacoes = st.text_area(
+            "💡 Recomendações para o próximo período *",
+            value=indicacoes_atual.get("recomendacoes", ""),
+            height=100,
+            placeholder="Ex: Manter TO 2x/semana, iniciar Fono 1x/semana, encaminhar para avaliação psicológica..."
+        )
+
+        if st.button("💾 Salvar Indicações e Notificar Responsável", type="primary", use_container_width=True):
+            if not terapeutas_selecionados:
+                st.error("⚠️ Selecione pelo menos um terapeuta.")
+            elif not diagnostico.strip():
+                st.error("⚠️ Preencha o diagnóstico.")
+            elif not recomendacoes.strip():
+                st.error("⚠️ Preencha as recomendações.")
+            else:
+                payload = {
+                    "terapeutas_ids": [terapeutas_map[t] for t in terapeutas_selecionados],
+                    "diagnostico": diagnostico.strip(),
+                    "evolucao": evolucao.strip() if evolucao else "",
+                    "recomendacoes": recomendacoes.strip()
+                }
+                ok, resp = post_api(f"/indications/patient/{pac_id}", payload)
+                if ok:
+                    st.success("✅ Indicações salvas! O responsável foi notificado por WhatsApp.")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error(f"❌ {resp.get('detail', 'Erro ao salvar')}")
+
+
+# ── Tab 4: Indicações Terapêuticas ───────────────────────────
+with tab4:
+    st.subheader("🏥 Indicações Terapêuticas — Consulta do Neuropediatra")
+    st.caption("Selecione os terapeutas recomendados, registre diagnóstico, evolução e recomendações. O TEO enviará ao responsável via WhatsApp.")
+
+    # Carrega indicações atuais
+    indicacoes = get_api(f"/indications/patient/{pac_id}")
+
+    # Busca terapeutas disponíveis para seleção
+    terapeutas_disponiveis = get_api("/professionals/") if "professionals" not in st.session_state else st.session_state["professionals"]
+    if not terapeutas_disponiveis:
+        try:
+            terapeutas_disponiveis = get_api("/professionals/")
+            st.session_state["professionals"] = terapeutas_disponiveis
+        except Exception:
+            terapeutas_disponiveis = []
+
+    # Filtra apenas terapeutas
+    terapeutas_list = [t for t in terapeutas_disponiveis if t.get("role") == "terapeuta"]
+    terapeutas_opcoes = {f"{t['nome']} ({t.get('especialidade', 'Sem especialidade')})": t['id'] for t in terapeutas_list}
+
+    # Terapeutas já indicados
+    atuais_ids = set(indicacoes.get("terapeutas_ids", [])) if indicacoes else set()
+
+    st.markdown("#### 👥 Equipe Terapêutica Recomendada")
+    selecionados = st.multiselect(
+        "Selecione os terapeutas recomendados para este paciente:",
+        options=list(terapeutas_opcoes.keys()),
+        default=[k for k, v in terapeutas_opcoes.items() if v in atuais_ids],
+        help="Mantenha pressionado Ctrl/Cmd para selecionar múltiplos"
+    )
+    selecionados_ids = [terapeutas_opcoes[k] for k in selecionados]
+
+    st.markdown("#### 🩺 Diagnóstico da Consulta")
+    diagnostico_atual = indicacoes.get("diagnostico", "") if indicacoes else ""
+    diagnostico = st.text_area(
+        "Diagnóstico formal (ex: TEA Nível 2 + TDAH):",
+        value=diagnostico_atual,
+        height=100,
+        placeholder="Registre o diagnóstico formal da consulta..."
+    )
+
+    st.markdown("#### 📈 Evolução Observada na Consulta")
+    evolucao_atual = indicacoes.get("evolucao", "") if indicacoes else ""
+    evolucao = st.text_area(
+        "Evolução observada (progressos, regressões, marcos):",
+        value=evolucao_atual,
+        height=120,
+        placeholder="Descreva a evolução do paciente desde a última consulta..."
+    )
+
+    st.markdown("#### 💡 Recomendações para o Próximo Período")
+    recomendacoes_atual = indicacoes.get("recomendacoes", "") if indicacoes else ""
+    recomendacoes = st.text_area(
+        "Recomendações (ajuste de frequência, novas metas, encaminhamentos):",
+        value=recomendacoes_atual,
+        height=120,
+        placeholder="Ex: Aumentar TO para 2x/semana, iniciar Psicologia, reavaliação em 4 meses..."
+    )
+
+    col_salvar, col_limpar = st.columns([1, 1])
+    with col_salvar:
+        if st.button("💾 Salvar Indicações e Enviar WhatsApp", type="primary", use_container_width=True):
+            if not selecionados_ids:
+                st.warning("⚠️ Selecione pelo menos um terapeuta.")
+            else:
+                payload = {
+                    "terapeutas_ids": selecionados_ids,
+                    "diagnostico": diagnostico,
+                    "evolucao": evolucao,
+                    "recomendacoes": recomendacoes
+                }
+                ok, resp = post_api(f"/indications/patient/{pac_id}", payload)
+                if ok:
+                    st.success("✅ Indicações salvas! WhatsApp enviado ao responsável.")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error(f"❌ {resp.get('detail', 'Erro ao salvar')}")
+
+    with col_limpar:
+        if st.button("🗑️ Limpar Indicações", type="secondary", use_container_width=True):
+            if st.session_state.get("confirmar_limpar_indicacoes"):
+                payload = {
+                    "terapeutas_ids": [],
+                    "diagnostico": "",
+                    "evolucao": "",
+                    "recomendacoes": ""
+                }
+                ok, resp = post_api(f"/indications/patient/{pac_id}", payload)
+                if ok:
+                    st.success("✅ Indicações limpas!")
+                    st.session_state.pop("confirmar_limpar_indicacoes", None)
+                    st.rerun()
+                else:
+                    st.error(f"❌ {resp.get('detail', 'Erro')}")
+            else:
+                st.session_state["confirmar_limpar_indicacoes"] = True
+                st.warning("⚠️ Clique novamente para confirmar limpeza")
+
+    st.divider()
+
+    # Exibe indicações atuais
+    if indicacoes:
+        st.markdown("### 📋 Indicações Atuais Registradas")
+        if indicacoes.get("terapeutas_ids"):
+            terapeutas_nomes = []
+            for tid in indicacoes["terapeutas_ids"]:
+                t = next((t for t in terapeutas_list if t['id'] == tid), None)
+                if t:
+                    terapeutas_nomes.append(f"{t['nome']} ({t.get('especialidade', '')})")
+            st.markdown(f"**Terapeutas:** {', '.join(terapeutas_nomes) if terapeutas_nomes else '—'}")
+        if indicacoes.get("diagnostico"):
+            st.markdown(f"**Diagnóstico:** {indicacoes['diagnostico']}")
+        if indicacoes.get("evolucao"):
+            st.markdown(f"**Evolução:** {indicacoes['evolucao']}")
+        if indicacoes.get("recomendacoes"):
+            st.markdown(f"**Recomendações:** {indicacoes['recomendacoes']}")
+        if indicacoes.get("atualizado_em"):
+            st.caption(f"Atualizado em: {indicacoes['atualizado_em']}")
+    else:
+        st.info("Nenhuma indicação registrada ainda.")
