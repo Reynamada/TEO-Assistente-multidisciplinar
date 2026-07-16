@@ -267,6 +267,12 @@ def _gerar_relatorio_completo(
 
         logger.info(f"✅ Relatório {report_id} gerado com sucesso: {pdf_path}")
 
+        # Dispara WhatsApp para o responsável (background)
+        try:
+            _enviar_laudo_whatsapp_background(report_id)
+        except Exception as e:
+            logger.warning(f"Falha ao agendar WhatsApp do laudo {report_id}: {e}")
+
     except Exception as e:
         from loguru import logger
         import traceback
@@ -469,3 +475,46 @@ def download_report_pdf(
         filename=filename,
         media_type="application/pdf"
     )
+
+
+def _enviar_laudo_whatsapp_background(report_id: UUID):
+    """Background task: envia laudo por WhatsApp ao responsável do paciente."""
+    from app.database import SessionLocal
+    from app.services import whatsapp_service
+    from loguru import logger
+
+    db = SessionLocal()
+    try:
+        report = db.query(Report).filter(Report.id == report_id).first()
+        if not report:
+            logger.warning(f"Relatório {report_id} não encontrado para WhatsApp")
+            return
+
+        patient = db.query(Patient).filter(Patient.id == report.paciente_id).first()
+        if not patient or not patient.whatsapp_responsavel:
+            logger.warning(f"Paciente ou WhatsApp não encontrado para laudo {report_id}")
+            return
+
+        profissional = db.query(Professional).filter(Professional.id == report.assinado_por).first()
+        profissional_nome = profissional.nome if profissional else "Neuropediatra"
+
+        mensagem = (
+            f"📋 *Laudo Semestral Disponível*\n\n"
+            f"Olá! O laudo semestral de *{patient.nome}* foi gerado pelo Dr(a). {profissional_nome}.\n\n"
+            f"📅 Período: {report.periodo_inicio.strftime('%d/%m/%Y')} a {report.periodo_fim.strftime('%d/%m/%Y')}\n"
+            f"🧠 Diagnóstico: {patient.diagnostico_principal}\n\n"
+            f"O documento completo está disponível no sistema TEO.\n"
+            f"Em caso de dúvidas, entre em contato com a recepção.\n\n"
+            f"Equipe TEO 🧩"
+        )
+
+        whatsapp_service.enviar_mensagem_whatsapp(
+            para_numero=patient.whatsapp_responsavel,
+            mensagem=mensagem
+        )
+        logger.info(f"✅ Laudo {report_id} enviado por WhatsApp para {patient.whatsapp_responsavel}")
+
+    except Exception as e:
+        logger.error(f"Erro ao enviar WhatsApp do laudo {report_id}: {e}")
+    finally:
+        db.close()

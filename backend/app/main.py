@@ -14,7 +14,7 @@ from .database import create_tables
 from .jobs.cron_jobs import create_scheduler
 
 # Importa todos os routers
-from .routers import auth, patients, evolutions, appointments, whatsapp, reports
+from .routers import auth, patients, evolutions, appointments, whatsapp, reports, indications
 
 settings = get_settings()
 
@@ -104,6 +104,7 @@ app.include_router(evolutions.router, prefix=API_PREFIX)
 app.include_router(appointments.router, prefix=API_PREFIX)
 app.include_router(whatsapp.router, prefix=API_PREFIX)
 app.include_router(reports.router, prefix=API_PREFIX)
+app.include_router(indications.router, prefix=API_PREFIX)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

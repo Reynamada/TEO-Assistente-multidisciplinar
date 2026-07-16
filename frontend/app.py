@@ -135,15 +135,14 @@ def render_sidebar(role: str, user_name: str):
             ],
             "terapeuta": [
                 ("🏥 Dashboard", "dashboard"),
-                ("👶 Pacientes", "pacientes"),
-                ("📝 Evoluções", "evolucoes"),
-                ("📅 Agendamentos", "agendamentos"),
+                ("👶 Meus Pacientes", "pacientes"),
+                ("📝 Minhas Evoluções", "evolucoes"),
             ],
             "neuropediatra": [
                 ("🏥 Dashboard", "dashboard"),
                 ("👶 Pacientes", "pacientes"),
                 ("📊 Progresso", "progresso"),
-                ("📝 Evoluções", "evolucoes"),
+                ("📝 Todas Evoluções", "evolucoes"),
                 ("📄 Relatórios", "relatorios"),
                 ("📅 Agendamentos", "agendamentos"),
             ],

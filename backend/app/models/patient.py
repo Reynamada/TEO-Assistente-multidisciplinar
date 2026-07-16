@@ -4,10 +4,19 @@ Armazena todos os dados clínicos e de contato dos pacientes atendidos pela clí
 """
 import uuid
 from datetime import datetime, date
-from sqlalchemy import Column, String, Date, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy import Column, String, Date, DateTime, ForeignKey, Boolean, Text, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
+
+
+# Tabela de associação paciente <-> terapeutas sugeridos
+paciente_terapeutas = Table(
+    "paciente_terapeutas_sugeridos",
+    Base.metadata,
+    Column("paciente_id", UUID(as_uuid=True), ForeignKey("pacientes.id"), primary_key=True),
+    Column("terapeuta_id", UUID(as_uuid=True), ForeignKey("profissionais.id"), primary_key=True)
+)
 
 
 class Patient(Base):
@@ -28,6 +37,12 @@ class Patient(Base):
     data_ultimo_laudo = Column(Date, nullable=True)
     alerta_laudo_enviado = Column(Boolean, default=False)
 
+    # Indicações do Neuropediatra (preenchidas no laudo/consulta)
+    terapeutas_indicados = Column(Text, nullable=True)  # JSON array de IDs dos terapeutas (legacy)
+    diagnostico_consulta = Column(Text, nullable=True)  # Diagnóstico formal da consulta
+    evolucao_consulta = Column(Text, nullable=True)     # Evolução observada na consulta
+    recomendacoes_consulta = Column(Text, nullable=True) # Recomendações para próximo período
+
     # Relacionamentos
     neuropediatra_id = Column(UUID(as_uuid=True), ForeignKey("profissionais.id"), nullable=True)
     ativo = Column(Boolean, default=True)
@@ -36,12 +51,14 @@ class Patient(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     observacoes = Column(Text, nullable=True)
+    recomendacoes_terapeuta = Column(Text, nullable=True)  # Recomendações gerais do neuropediatra
 
     # Relacionamentos ORM
     neuropediatra = relationship("Professional", back_populates="pacientes_atendidos", foreign_keys=[neuropediatra_id])
     evolucoes = relationship("Evolution", back_populates="paciente", cascade="all, delete-orphan")
     citas_neurologia = relationship("Appointment", back_populates="paciente", cascade="all, delete-orphan")
     relatorios = relationship("Report", back_populates="paciente", cascade="all, delete-orphan")
+    terapeutas_sugeridos = relationship("Professional", secondary=paciente_terapeutas, backref="pacientes_sugeridos")
 
     def __repr__(self):
         return f"<Patient id={self.id} nome={self.nome}>"

@@ -4,7 +4,7 @@ Módulo 1 do sistema: registro de sessões + tradução LLM + disparo WhatsApp.
 """
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
@@ -26,7 +26,12 @@ def list_evolutions(
     db: Session = Depends(get_db),
     current_user: Professional = Depends(get_current_user)
 ):
-    """Lista evoluções de um paciente (Terapeutas veem apenas suas próprias sessões registradas)."""
+    """Lista evoluções de um paciente (Terapeutas veem apenas suas próprias; Recepção não tem acesso)."""
+    if current_user.role == ProfessionalRole.RECEPCAO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Recepção não tem acesso a evoluções terapêuticas"
+        )
     query = db.query(Evolution).options(joinedload(Evolution.profissional)).filter(Evolution.paciente_id == patient_id)
     if current_user.role == ProfessionalRole.TERAPEUTA:
         query = query.filter(Evolution.profissional_id == current_user.id)
@@ -104,7 +109,13 @@ def translate_preview(
     """
     Pré-visualiza a tradução LLM sem salvar no banco.
     Usado no dashboard do terapeuta antes de enviar.
+    Recepção não tem acesso.
     """
+    if current_user.role == ProfessionalRole.RECEPCAO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Recepção não tem acesso a traduções de evoluções"
+        )
     mensagem = llm_service.traduzir_evolucao(
         data.notas_tecnicas,
         data.nome_paciente,

@@ -204,3 +204,27 @@ class ReportResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# ─────────────────────────────────────────────
+# INDICAÇÕES TERAPÊUTICAS (Neuropediatra)
+# ─────────────────────────────────────────────
+
+class IndicationCreate(BaseModel):
+    terapeutas_ids: List[UUID] = []
+    diagnostico: Optional[str] = None
+    evolucao: Optional[str] = None
+    recomendacoes: Optional[str] = None
+
+class IndicationUpdate(BaseModel):
+    terapeutas_ids: Optional[List[UUID]] = None
+    diagnostico: Optional[str] = None
+    evolucao: Optional[str] = None
+    recomendacoes: Optional[str] = None
+
+class IndicationResponse(BaseModel):
+    terapeutas_ids: List[UUID] = []
+    diagnostico: Optional[str] = None
+    evolucao: Optional[str] = None
+    recomendacoes: Optional[str] = None
+    atualizado_em: Optional[datetime] = None
